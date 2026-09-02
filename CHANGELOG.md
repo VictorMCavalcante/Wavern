@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/VictorMCavalcante/Wavern/compare/v1.1.0...v1.1.1) (2026-09-02)
+
+
+### Bug Fixes
+
+* add missing AppKit import for NSImage in AudioProcessController ([36fd60c](https://github.com/VictorMCavalcante/Wavern/commit/36fd60c83a349623d613b67140ef7a2f6636c13a))
+* replace DispatchQueue.async with Task.detached, fix ShapeStyle accentColor, add NSImage type annotation ([59f2acd](https://github.com/VictorMCavalcante/Wavern/commit/59f2acd7cba894ebfdfa58eb424c1204906679d0))
+
 ## [1.1.0](https://github.com/VictorMCavalcante/Wavern/compare/v1.0.0...v1.1.0) (2026-09-02)
 
 
