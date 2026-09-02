@@ -58,10 +58,13 @@ struct MenuView: View {
                 Button("Quit Wavern") { NSApp.terminate(nil) }
                     .buttonStyle(.borderless)
                 Spacer()
-                if let url = updateChecker.updateURL {
-                    Button("Update available →") { NSWorkspace.shared.open(url) }
-                        .buttonStyle(.borderless)
-                        .foregroundStyle(Color.accentColor)
+                if updateChecker.updateURL != nil {
+                    Button(updateChecker.isInstalling ? "Installing…" : "Update available →") {
+                        updateChecker.installUpdate()
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(Color.accentColor)
+                    .disabled(updateChecker.isInstalling)
                 }
             }
         }
