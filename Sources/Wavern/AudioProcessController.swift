@@ -24,7 +24,6 @@ final class AudioProcessController: ObservableObject {
     // MARK: Now playing
 
     @Published private(set) var nowPlaying: [AudioObjectID: NowPlaying] = [:]
-    private let scriptQueue = DispatchQueue(label: "com.wavern.nowplaying", qos: .userInitiated)
     private var nowPlayingRefreshInFlight = false
 
     func nowPlaying(for process: AudioProcess) -> NowPlaying? { nowPlaying[process.id] }
@@ -61,12 +60,10 @@ final class AudioProcessController: ObservableObject {
             nowPlaying[process.id] = NowPlaying(title: current.title, artist: current.artist,
                                                  album: current.album, isPlaying: !current.isPlaying)
         }
-        scriptQueue.async { [weak self] in
+        Task.detached(priority: .userInitiated) { [weak self] in
             NowPlayingService.send(command, bundleID: bundleID)
-            Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 350_000_000)
-                self?.refreshNowPlaying()
-            }
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            await MainActor.run { self?.refreshNowPlaying() }
         }
     }
 
@@ -221,7 +218,7 @@ final class AudioProcessController: ObservableObject {
         }
         guard !targets.isEmpty else { return }
         nowPlayingRefreshInFlight = true
-        scriptQueue.async { [weak self] in
+        Task.detached(priority: .userInitiated) { [weak self] in
             var fetched: [AudioObjectID: NowPlaying] = [:]
             for target in targets {
                 if var info = NowPlayingService.fetch(bundleID: target.bundleID) {
@@ -231,7 +228,7 @@ final class AudioProcessController: ObservableObject {
                     fetched[target.id] = info
                 }
             }
-            Task { @MainActor in
+            await MainActor.run { [weak self] in
                 guard let self else { return }
                 self.nowPlayingRefreshInFlight = false
                 for (id, info) in fetched { self.nowPlaying[id] = info }

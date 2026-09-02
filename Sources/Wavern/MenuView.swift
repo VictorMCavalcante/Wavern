@@ -170,7 +170,7 @@ struct AudioProcessRow: View {
                 }
                 .buttonStyle(.borderless)
                 .font(.caption)
-                .foregroundStyle(.accentColor)
+                .foregroundStyle(Color.accentColor)
             }
 
             if let error = controller.tapErrors[process.id] {
@@ -218,7 +218,7 @@ struct AudioProcessRow: View {
     }
 
     @ViewBuilder private var artArea: some View {
-        let artwork = controller.artworkImages[process.id]
+        let artwork: NSImage? = controller.artworkImages[process.id]
         ZStack(alignment: .bottomTrailing) {
             Group {
                 if let artwork {
