@@ -45,6 +45,7 @@ jobs:
 
       - name: Build (Release)
         run: |
+          VERSION="${TAG#v}"
           xcodebuild \
             -project Wavern.xcodeproj \
             -scheme Wavern \
@@ -54,6 +55,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION="$VERSION" \
             build
 
       - name: Package .dmg
