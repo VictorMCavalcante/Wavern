@@ -4,7 +4,7 @@ enum BrowserBridgeInstaller {
 
     static let hostName = "com.wavern.browserbridge"
     // Filled in during Task 8 after key pair generation.
-    static let extensionID = "PENDING_EXTENSION_ID"
+    static let extensionID = "jkfkclphcapaiomnkpllkodpnncllbfd"
 
     private static var bridgePath: String {
         Bundle.main.bundleURL
