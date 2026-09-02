@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/VictorMCavalcante/Wavern/compare/v1.2.0...v1.3.0) (2026-09-02)
+
+
+### Features
+
+* auto-install update by downloading DMG and relaunching ([752da7c](https://github.com/VictorMCavalcante/Wavern/commit/752da7cdb0fae6d758232ed4850f17d25627e534))
+
 ## [1.2.0](https://github.com/VictorMCavalcante/Wavern/compare/v1.1.2...v1.2.0) (2026-09-02)
 
 
