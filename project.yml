@@ -17,8 +17,9 @@ targets:
     platform: macOS
     sources:
       - path: Sources/Wavern
-    resources:
       - path: Sources/BrowserExtension
+        buildPhase: resources
+        type: folder
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.wavern.app
