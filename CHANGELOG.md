@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.2](https://github.com/VictorMCavalcante/Wavern/compare/v1.3.1...v1.3.2) (2026-09-02)
+
+
+### Bug Fixes
+
+* inject MARKETING_VERSION from release tag in xcodebuild ([972f9b2](https://github.com/VictorMCavalcante/Wavern/commit/972f9b25434519ae09e1e3a62f2adf8e0c06e7f6))
+* use MARKETING_VERSION build var in CFBundleShortVersionString ([3cf129a](https://github.com/VictorMCavalcante/Wavern/commit/3cf129a0114fe847a15093536e86898055c3e093))
+
 ## [1.3.1](https://github.com/VictorMCavalcante/Wavern/compare/v1.3.0...v1.3.1) (2026-09-02)
 
 
