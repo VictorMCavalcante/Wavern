@@ -5,12 +5,14 @@ import SwiftUI
 struct WavernApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var controller = AudioProcessController.shared
+    @StateObject private var updateChecker = UpdateChecker.shared
 
     var body: some Scene {
         MenuBarExtra {
             MenuView()
                 .environmentObject(controller)
                 .environmentObject(controller.browserTabStore)
+                .environmentObject(updateChecker)
         } label: {
             if controller.playing.isEmpty {
                 Image(systemName: "speaker.wave.2.fill")
@@ -27,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         AudioProcessController.shared.start()
         BrowserBridgeInstaller.install()
+        UpdateChecker.shared.check()
         // Make the MenuBarExtra panel transparent so VisualEffectBackground shows through
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             for window in NSApp.windows {

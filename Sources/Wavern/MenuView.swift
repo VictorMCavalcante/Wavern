@@ -6,6 +6,7 @@ import SwiftUI
 struct MenuView: View {
     @EnvironmentObject var controller: AudioProcessController
     @EnvironmentObject var browserTabStore: BrowserTabStore
+    @EnvironmentObject var updateChecker: UpdateChecker
     @State private var launchAtLogin = LoginItem.isEnabled
 
     var body: some View {
@@ -57,6 +58,11 @@ struct MenuView: View {
                 Button("Quit Wavern") { NSApp.terminate(nil) }
                     .buttonStyle(.borderless)
                 Spacer()
+                if let url = updateChecker.updateURL {
+                    Button("Update available →") { NSWorkspace.shared.open(url) }
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(Color.accentColor)
+                }
             }
         }
         .padding(.horizontal, 14)
