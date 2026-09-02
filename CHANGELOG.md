@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/VictorMCavalcante/Wavern/compare/v1.1.2...v1.2.0) (2026-09-02)
+
+
+### Features
+
+* add GitHub release update checker with menu banner ([b43c487](https://github.com/VictorMCavalcante/Wavern/commit/b43c487fff08e29730f861f6069cef9aa978e71c))
+
 ## [1.1.2](https://github.com/VictorMCavalcante/Wavern/compare/v1.1.1...v1.1.2) (2026-09-02)
 
 
