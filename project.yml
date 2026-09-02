@@ -1,0 +1,45 @@
+name: Wavern
+options:
+  bundleIdPrefix: com.wavern
+  deploymentTarget:
+    macOS: "14.4"
+  createIntermediateGroups: true
+settings:
+  base:
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+targets:
+  Wavern:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/Wavern
+    resources:
+      - path: Sources/BrowserExtension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.wavern.app
+        PRODUCT_NAME: Wavern
+        INFOPLIST_FILE: Sources/Wavern/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Sources/Wavern/Wavern.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+        ENABLE_HARDENED_RUNTIME: YES
+        ENABLE_APP_SANDBOX: NO
+        MACOSX_DEPLOYMENT_TARGET: "14.4"
+
+  WavernBrowserBridge:
+    type: tool
+    platform: macOS
+    sources:
+      - path: Sources/WavernBrowserBridge
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.wavern.browserbridge
+        PRODUCT_NAME: WavernBrowserBridge
+        MACOSX_DEPLOYMENT_TARGET: "14.4"
+        ENABLE_APP_SANDBOX: NO
+        ENABLE_HARDENED_RUNTIME: NO
+        SWIFT_VERSION: "5.0"
