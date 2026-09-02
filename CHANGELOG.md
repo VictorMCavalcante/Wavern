@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.1](https://github.com/VictorMCavalcante/Wavern/compare/v1.3.0...v1.3.1) (2026-09-02)
+
+
+### Bug Fixes
+
+* bundle WavernBrowserBridge into app MacOS dir via dependency and post-build script ([1d69e90](https://github.com/VictorMCavalcante/Wavern/commit/1d69e903547bef81d9d4296340d8837e5579426e))
+* set MARKETING_VERSION to 1.2.0 and add release-please annotation ([81d5766](https://github.com/VictorMCavalcante/Wavern/commit/81d57667f1ee7dc7b1a90fd548832b4c4a52e4ff))
+
 ## [1.3.0](https://github.com/VictorMCavalcante/Wavern/compare/v1.2.0...v1.3.0) (2026-09-02)
 
 
