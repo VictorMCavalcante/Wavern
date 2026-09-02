@@ -1,0 +1,454 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		077AB3EF024FE0F1CDD30A54 /* MarqueeText.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D95E3D243D2AC61FF4E9CE /* MarqueeText.swift */; };
+		24BFAB1EEE185B5D69169959 /* CoreAudioUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C943034C6A7A98265F3307E /* CoreAudioUtils.swift */; };
+		27085E3225792DD8E035E848 /* AudioProcess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B0EC02F9142D15E4397471 /* AudioProcess.swift */; };
+		467584012C28E5C5E9FEB491 /* BrowserBridgeInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83D480BB4DE6C2455A321504 /* BrowserBridgeInstaller.swift */; };
+		5D5B3C6CA15B9CCCCB1AE34A /* WavernApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FEA11F006061032C5B771C3 /* WavernApp.swift */; };
+		755F42BEBFBEBBB38D1B82F0 /* NowPlayingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F19BBC9BA05940DEEA93AC98 /* NowPlayingService.swift */; };
+		800CA13254057718521EC431 /* BrowserTabStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F0981085AEEB976F70F6382 /* BrowserTabStore.swift */; };
+		A8A0908C80DAEAE19BAB4CD9 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D850AFD5F1A4CA512948BA72 /* main.swift */; };
+		AF6ECF2E1F77871245C08421 /* MenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50DB04547613AC0960597D85 /* MenuView.swift */; };
+		B968F85A62987BF4F6E4809A /* AudioProcessController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78D2D194EE570EE6016A6CBF /* AudioProcessController.swift */; };
+		BA0612CF8309913EE4976C12 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F6EEEA8AFBDBF7DEB72041E /* WaveformView.swift */; };
+		C7FA37490956726960AB2151 /* VisualEffectBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49E930E7DF36532A4F421406 /* VisualEffectBackground.swift */; };
+		CA1EAA51FEF6AAE04BDDB3A9 /* NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6CC1D2A940FFE711E13D79 /* NowPlaying.swift */; };
+		D4A57468A209A95A4C9CECDF /* LoginItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88A81F8F92282BC24A0BE96D /* LoginItem.swift */; };
+		E00831A8E4A832E238B863CC /* ProcessTap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 287FD31EB0EC9B6C4AA60ADF /* ProcessTap.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		25627438337AAA1CAFA22666 /* Wavern.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Wavern.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		287FD31EB0EC9B6C4AA60ADF /* ProcessTap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessTap.swift; sourceTree = "<group>"; };
+		2F6EEEA8AFBDBF7DEB72041E /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
+		2FEA11F006061032C5B771C3 /* WavernApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WavernApp.swift; sourceTree = "<group>"; };
+		49E930E7DF36532A4F421406 /* VisualEffectBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectBackground.swift; sourceTree = "<group>"; };
+		50DB04547613AC0960597D85 /* MenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuView.swift; sourceTree = "<group>"; };
+		61C38249A6A3AD4EF0D6FDAF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		62B0EC02F9142D15E4397471 /* AudioProcess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioProcess.swift; sourceTree = "<group>"; };
+		6D6CC1D2A940FFE711E13D79 /* NowPlaying.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlaying.swift; sourceTree = "<group>"; };
+		6F0981085AEEB976F70F6382 /* BrowserTabStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserTabStore.swift; sourceTree = "<group>"; };
+		78D2D194EE570EE6016A6CBF /* AudioProcessController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioProcessController.swift; sourceTree = "<group>"; };
+		7C943034C6A7A98265F3307E /* CoreAudioUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreAudioUtils.swift; sourceTree = "<group>"; };
+		83D480BB4DE6C2455A321504 /* BrowserBridgeInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserBridgeInstaller.swift; sourceTree = "<group>"; };
+		88A81F8F92282BC24A0BE96D /* LoginItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItem.swift; sourceTree = "<group>"; };
+		A0D95E3D243D2AC61FF4E9CE /* MarqueeText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarqueeText.swift; sourceTree = "<group>"; };
+		B06C10CEB7D95B6074E1C2CA /* Wavern.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Wavern.entitlements; sourceTree = "<group>"; };
+		D850AFD5F1A4CA512948BA72 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		F19BBC9BA05940DEEA93AC98 /* NowPlayingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingService.swift; sourceTree = "<group>"; };
+		F3153052F81B21C4F34FB0DF /* WavernBrowserBridge */ = {isa = PBXFileReference; includeInIndex = 0; path = WavernBrowserBridge; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		5027E2B42AF18456577500B4 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				F2FFF64E84FB0BB7B8B1B116 /* Wavern */,
+				9E48A564631C435528E0E0C7 /* WavernBrowserBridge */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		8EF47DA2A74FDB60096820CA = {
+			isa = PBXGroup;
+			children = (
+				5027E2B42AF18456577500B4 /* Sources */,
+				FB8FAADF21AE6BC84378C95E /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		9E48A564631C435528E0E0C7 /* WavernBrowserBridge */ = {
+			isa = PBXGroup;
+			children = (
+				D850AFD5F1A4CA512948BA72 /* main.swift */,
+			);
+			path = WavernBrowserBridge;
+			sourceTree = "<group>";
+		};
+		F2FFF64E84FB0BB7B8B1B116 /* Wavern */ = {
+			isa = PBXGroup;
+			children = (
+				62B0EC02F9142D15E4397471 /* AudioProcess.swift */,
+				78D2D194EE570EE6016A6CBF /* AudioProcessController.swift */,
+				83D480BB4DE6C2455A321504 /* BrowserBridgeInstaller.swift */,
+				6F0981085AEEB976F70F6382 /* BrowserTabStore.swift */,
+				7C943034C6A7A98265F3307E /* CoreAudioUtils.swift */,
+				61C38249A6A3AD4EF0D6FDAF /* Info.plist */,
+				88A81F8F92282BC24A0BE96D /* LoginItem.swift */,
+				A0D95E3D243D2AC61FF4E9CE /* MarqueeText.swift */,
+				50DB04547613AC0960597D85 /* MenuView.swift */,
+				6D6CC1D2A940FFE711E13D79 /* NowPlaying.swift */,
+				F19BBC9BA05940DEEA93AC98 /* NowPlayingService.swift */,
+				287FD31EB0EC9B6C4AA60ADF /* ProcessTap.swift */,
+				49E930E7DF36532A4F421406 /* VisualEffectBackground.swift */,
+				2F6EEEA8AFBDBF7DEB72041E /* WaveformView.swift */,
+				B06C10CEB7D95B6074E1C2CA /* Wavern.entitlements */,
+				2FEA11F006061032C5B771C3 /* WavernApp.swift */,
+			);
+			path = Wavern;
+			sourceTree = "<group>";
+		};
+		FB8FAADF21AE6BC84378C95E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				25627438337AAA1CAFA22666 /* Wavern.app */,
+				F3153052F81B21C4F34FB0DF /* WavernBrowserBridge */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		C8B8C68550CD0D6C2D7DEAD0 /* WavernBrowserBridge */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A3CBCB37886037910780CB89 /* Build configuration list for PBXNativeTarget "WavernBrowserBridge" */;
+			buildPhases = (
+				56FF253C073E38D42EF8B3DB /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = WavernBrowserBridge;
+			packageProductDependencies = (
+			);
+			productName = WavernBrowserBridge;
+			productReference = F3153052F81B21C4F34FB0DF /* WavernBrowserBridge */;
+			productType = "com.apple.product-type.tool";
+		};
+		DA012F2E8EC71E5AFE3C5D45 /* Wavern */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EE2AB22553F1FD26F08AA0A7 /* Build configuration list for PBXNativeTarget "Wavern" */;
+			buildPhases = (
+				C37FEF4A886CBDFBB7CA227A /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Wavern;
+			packageProductDependencies = (
+			);
+			productName = Wavern;
+			productReference = 25627438337AAA1CAFA22666 /* Wavern.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E5C341BE7903A377918890F5 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					C8B8C68550CD0D6C2D7DEAD0 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					DA012F2E8EC71E5AFE3C5D45 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 7B6C4B69F1C09D246985C933 /* Build configuration list for PBXProject "Wavern" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 8EF47DA2A74FDB60096820CA;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = FB8FAADF21AE6BC84378C95E /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DA012F2E8EC71E5AFE3C5D45 /* Wavern */,
+				C8B8C68550CD0D6C2D7DEAD0 /* WavernBrowserBridge */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		56FF253C073E38D42EF8B3DB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A8A0908C80DAEAE19BAB4CD9 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C37FEF4A886CBDFBB7CA227A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				27085E3225792DD8E035E848 /* AudioProcess.swift in Sources */,
+				B968F85A62987BF4F6E4809A /* AudioProcessController.swift in Sources */,
+				467584012C28E5C5E9FEB491 /* BrowserBridgeInstaller.swift in Sources */,
+				800CA13254057718521EC431 /* BrowserTabStore.swift in Sources */,
+				24BFAB1EEE185B5D69169959 /* CoreAudioUtils.swift in Sources */,
+				D4A57468A209A95A4C9CECDF /* LoginItem.swift in Sources */,
+				077AB3EF024FE0F1CDD30A54 /* MarqueeText.swift in Sources */,
+				AF6ECF2E1F77871245C08421 /* MenuView.swift in Sources */,
+				CA1EAA51FEF6AAE04BDDB3A9 /* NowPlaying.swift in Sources */,
+				755F42BEBFBEBBB38D1B82F0 /* NowPlayingService.swift in Sources */,
+				E00831A8E4A832E238B863CC /* ProcessTap.swift in Sources */,
+				C7FA37490956726960AB2151 /* VisualEffectBackground.swift in Sources */,
+				BA0612CF8309913EE4976C12 /* WaveformView.swift in Sources */,
+				5D5B3C6CA15B9CCCCB1AE34A /* WavernApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		6CCC5D211A24B80FA63A6479 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wavern.browserbridge;
+				PRODUCT_NAME = WavernBrowserBridge;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		82BA96DAB81B1B6E21AF2277 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.4;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		8DB671FA26E65C1320B50AF5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/Wavern/Wavern.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/Wavern/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wavern.app;
+				PRODUCT_NAME = Wavern;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		C4904DC96099E922E51B6F9A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.4;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		D2A75630B23E3CF972BEAC88 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/Wavern/Wavern.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/Wavern/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wavern.app;
+				PRODUCT_NAME = Wavern;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		E0CF00D234F435FF3AD56602 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wavern.browserbridge;
+				PRODUCT_NAME = WavernBrowserBridge;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		7B6C4B69F1C09D246985C933 /* Build configuration list for PBXProject "Wavern" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				82BA96DAB81B1B6E21AF2277 /* Debug */,
+				C4904DC96099E922E51B6F9A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A3CBCB37886037910780CB89 /* Build configuration list for PBXNativeTarget "WavernBrowserBridge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E0CF00D234F435FF3AD56602 /* Debug */,
+				6CCC5D211A24B80FA63A6479 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EE2AB22553F1FD26F08AA0A7 /* Build configuration list for PBXNativeTarget "Wavern" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D2A75630B23E3CF972BEAC88 /* Debug */,
+				8DB671FA26E65C1320B50AF5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = E5C341BE7903A377918890F5 /* Project object */;
+}
