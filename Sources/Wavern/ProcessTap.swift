@@ -29,7 +29,7 @@ final class ProcessTap: @unchecked Sendable {
     private var tapID: AudioObjectID = .unknown
     private var aggregateID: AudioObjectID = .unknown
     private var ioProcID: AudioDeviceIOProcID?
-    private let ioQueue = DispatchQueue(label: "com.voulum.tap.io", qos: .userInteractive)
+    private let ioQueue = DispatchQueue(label: "com.wavern.tap.io", qos: .userInteractive)
 
     private let gainPtr: UnsafeMutablePointer<Float> = {
         let p = UnsafeMutablePointer<Float>.allocate(capacity: 1)
@@ -200,7 +200,7 @@ final class ProcessTap: @unchecked Sendable {
 extension ProcessTap {
     /// UID prefix stamped on every aggregate device we create. Used both to build
     /// new ones and to recognise orphans left behind by a previous crash.
-    static let aggregateUIDPrefix = "com.voulum.aggregate."
+    static let aggregateUIDPrefix = "com.wavern.aggregate."
     /// Prefix on every process-tap description name we create.
     static let tapNamePrefix = "Voulum-"
 

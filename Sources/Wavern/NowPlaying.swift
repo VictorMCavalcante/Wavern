@@ -5,8 +5,8 @@ struct NowPlaying: Equatable {
     let artist: String
     let album: String?
     let isPlaying: Bool
-    var artworkData: Data?        // Apple Music: raw bytes from AppleScript descriptor
-    var artworkURLString: String? // Spotify: URL string, download via URLSession
+    var artworkData: Data? = nil        // Apple Music: raw bytes from AppleScript descriptor
+    var artworkURLString: String? = nil // Spotify: URL string, download via URLSession
 
     var subtitle: String {
         switch (artist.isEmpty, album?.isEmpty ?? true) {
