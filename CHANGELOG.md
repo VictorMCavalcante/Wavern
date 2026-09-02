@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/VictorMCavalcante/Wavern/compare/v1.1.1...v1.1.2) (2026-09-02)
+
+
+### Bug Fixes
+
+* include BrowserExtension as folder resource in XcodeGen target ([54b6b71](https://github.com/VictorMCavalcante/Wavern/commit/54b6b7177c6baa0e899146adb2441af408c7d559))
+
 ## [1.1.1](https://github.com/VictorMCavalcante/Wavern/compare/v1.1.0...v1.1.1) (2026-09-02)
 
 
