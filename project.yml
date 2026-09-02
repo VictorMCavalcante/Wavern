@@ -20,6 +20,14 @@ targets:
       - path: Sources/BrowserExtension
         buildPhase: resources
         type: folder
+    dependencies:
+      - target: WavernBrowserBridge
+        embed: false
+    postBuildScripts:
+      - name: Copy WavernBrowserBridge into app bundle
+        script: |
+          cp "${BUILT_PRODUCTS_DIR}/WavernBrowserBridge" "${CODESIGNING_FOLDER_PATH}/Contents/MacOS/"
+        basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.wavern.app
