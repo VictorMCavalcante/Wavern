@@ -83,7 +83,7 @@ final class ProcessTap: @unchecked Sendable {
 
         let aggregateUID = "\(Self.aggregateUIDPrefix)\(process.pid).\(UUID().uuidString)"
         let description2: [String: Any] = [
-            kAudioAggregateDeviceNameKey: "Voulum \(process.name)",
+            kAudioAggregateDeviceNameKey: "Wavern \(process.name)",
             kAudioAggregateDeviceUIDKey: aggregateUID,
             kAudioAggregateDeviceMainSubDeviceKey: outputUID,
             kAudioAggregateDeviceIsPrivateKey: true,

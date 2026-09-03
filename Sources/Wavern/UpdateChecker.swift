@@ -24,10 +24,12 @@ final class UpdateChecker: ObservableObject {
             let latest = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
             guard latest.compare(current, options: .numeric) == .orderedDescending else { return }
 
+            // Only ever pull the DMG over TLS from GitHub itself.
             let dmgURL: URL? = (json["assets"] as? [[String: Any]])?
                 .first { ($0["name"] as? String)?.hasSuffix(".dmg") == true }
                 .flatMap { $0["browser_download_url"] as? String }
                 .flatMap { URL(string: $0) }
+                .flatMap { $0.scheme == "https" && $0.host?.hasSuffix("github.com") == true ? $0 : nil }
 
             await MainActor.run {
                 self.updateURL = releaseURL
@@ -55,16 +57,18 @@ final class UpdateChecker: ObservableObject {
             }
             try? FileManager.default.moveItem(at: dl, to: dmgDest)
 
-            // Shell script runs after we quit: mount → ditto → unmount → reopen
+            // Shell script runs after we quit: mount → ditto → unmount → reopen.
+            // Paths go through single quotes; escape any quote inside them.
+            func q(_ path: String) -> String { "'" + path.replacingOccurrences(of: "'", with: "'\\''") + "'" }
             let script = """
             #!/bin/sh
             sleep 1
             MNT=$(mktemp -d)
-            hdiutil attach '\(dmgDest.path)' -mountpoint "$MNT" -nobrowse -quiet
-            ditto "$MNT/Wavern.app" '\(appPath)'
+            hdiutil attach \(q(dmgDest.path)) -mountpoint "$MNT" -nobrowse -quiet
+            ditto "$MNT/Wavern.app" \(q(appPath))
             hdiutil detach "$MNT" -quiet
-            rm -rf "$MNT" '\(dmgDest.path)'
-            open '\(appPath)'
+            rm -rf "$MNT" \(q(dmgDest.path))
+            open \(q(appPath))
             """
             let sh = tmp.appendingPathComponent("wavern-install.sh")
             try? script.write(to: sh, atomically: true, encoding: .utf8)

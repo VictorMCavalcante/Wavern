@@ -1,11 +1,11 @@
 import ServiceManagement
 
 /// Thin wrapper over `SMAppService` for the "launch at login" toggle
-/// (macOS 13+). Registering the main app makes macOS relaunch Voulum on login;
+/// (macOS 13+). Registering the main app makes macOS relaunch Wavern on login;
 /// the state is stored by the system, so it survives reboots and reinstalls.
 enum LoginItem {
 
-    /// Whether Voulum is currently registered to launch at login.
+    /// Whether Wavern is currently registered to launch at login.
     static var isEnabled: Bool {
         SMAppService.mainApp.status == .enabled
     }

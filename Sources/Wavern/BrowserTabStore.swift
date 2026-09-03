@@ -26,6 +26,11 @@ final class BrowserTabStore: ObservableObject {
     /// Per-tab volume 0...1, keyed by Chrome tab id. Missing = full volume.
     @Published private(set) var tabVolumes: [Int: Float] = [:]
     private var lastUpdated: Date?
+    private let settings: SettingsStore
+
+    init(settings: SettingsStore) {
+        self.settings = settings
+    }
 
     private let dir: URL = {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory,
@@ -51,8 +56,7 @@ final class BrowserTabStore: ObservableObject {
         var changed = false
         for tab in audibleTabs {
             guard let id = tab.tabId, tabVolumes[id] == nil, let host = tab.host,
-                  let saved = UserDefaults.standard.object(forKey: "wavern.tabvol.\(host)") as? Float,
-                  saved < 1 else { continue }
+                  let saved = settings.tabVolume(forHost: host), saved < 1 else { continue }
             tabVolumes[id] = saved
             changed = true
         }
@@ -76,9 +80,7 @@ final class BrowserTabStore: ObservableObject {
         guard let id = tab.tabId else { return }
         let v = min(max(value, 0), 1)
         tabVolumes[id] = v
-        if let host = tab.host {
-            UserDefaults.standard.set(v, forKey: "wavern.tabvol.\(host)")
-        }
+        if let host = tab.host { settings.setTabVolume(v, forHost: host) }
         writeVolumes()
     }
 

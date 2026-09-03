@@ -26,6 +26,10 @@ struct WavernApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillTerminate(_ notification: Notification) {
+        AudioProcessController.shared.willTerminate()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         AudioProcessController.shared.start()
         BrowserBridgeInstaller.install()

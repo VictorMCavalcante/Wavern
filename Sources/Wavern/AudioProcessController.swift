@@ -4,12 +4,60 @@ import Combine
 import CoreAudio
 import Foundation
 
+/// Central model: which processes make sound, their taps and gains, and the
+/// output device profile. Ducking, media keys and now-playing metadata live in
+/// the `+Ducking`, `+MediaKeys` and `+NowPlaying` extensions.
+///
+/// Threading: all state is main-actor. Blocking HAL calls (enumeration, tap
+/// creation/teardown) run on `halQueue` and hop back to the main actor.
 @MainActor
 final class AudioProcessController: ObservableObject {
 
     static let shared = AudioProcessController()
 
+    let settings = SettingsStore()
+    let browserTabStore: BrowserTabStore
+    let halQueue = DispatchQueue(label: "com.wavern.hal", qos: .userInitiated)
+
+    init() {
+        browserTabStore = BrowserTabStore(settings: settings)
+        audioPermissionGranted = settings.hasGrantedAudioTap
+        duckLevel = settings.duckLevel
+        mediaKeysEnabled = settings.mediaKeysEnabled
+    }
+
+    // MARK: State owned by the extensions (stored properties must live here)
+
+    // +Ducking
+    @Published var duckLevel: Float { didSet { duckLevelDidChange() } }
+    @Published private(set) var isDucking = false
+    var duckReleaseWork: DispatchWorkItem?
+    var duckerCache: [String: Bool] = [:]
+
+    // +MediaKeys
+    @Published var mediaKeysEnabled: Bool { didSet { mediaKeysEnabledDidChange() } }
+    @Published private(set) var mediaKeysNeedPermission = false
+
+    // +NowPlaying
+    @Published private(set) var nowPlaying: [AudioObjectID: NowPlaying] = [:]
+    @Published private(set) var artworkImages: [AudioObjectID: NSImage] = [:]
+    var nowPlayingRefreshInFlight = false
+    var artworkCache: [String: NSImage] = [:]
+
+    func setDucking(_ on: Bool) {
+        guard isDucking != on else { return }
+        isDucking = on
+        log.info("Ducking \(on ? "on" : "off", privacy: .public) (level \(self.duckLevel))")
+        reapplyAllGains()
+    }
+    func setMediaKeysNeedPermission(_ v: Bool) { mediaKeysNeedPermission = v }
+    func setNowPlaying(_ v: [AudioObjectID: NowPlaying]) { nowPlaying = v }
+    func setArtworkImages(_ v: [AudioObjectID: NSImage]) { artworkImages = v }
+
+    // MARK: Processes
+
     @Published private(set) var processes: [AudioProcess] = []
+
     /// Processes currently outputting audio, plus any that did so within the
     /// last `lingerInterval` — so short sounds (notifications) stay adjustable.
     var playing: [AudioProcess] {
@@ -18,33 +66,42 @@ final class AudioProcessController: ObservableObject {
             .filter { $0.isPlaying || (lingerUntil[$0.id] ?? .distantPast) > now }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
+
     var isAnyPlaying: Bool { processes.contains(where: \.isPlaying) }
-
-    private var pollTimer: Timer?
-    private let pollInterval: TimeInterval = 1.0
-
-    private let halQueue = DispatchQueue(label: "com.wavern.hal", qos: .userInitiated)
-    private var reloadInFlight = false
-    private var reloadPending = false
 
     // MARK: Linger
 
     static let lingerInterval: TimeInterval = 30
     @Published private(set) var lingerUntil: [AudioObjectID: Date] = [:]
+    private var lingerTimer: Timer?
 
-    private func noteActivity(_ id: AudioObjectID) {
+    /// Called whenever a process starts or stops output: it was audible around now.
+    func noteActivity(_ id: AudioObjectID) {
         log.info("Audio activity on process object \(id)")
         lingerUntil[id] = Date().addingTimeInterval(Self.lingerInterval)
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.lingerInterval + 0.1) { [weak self] in
-            guard let self else { return }
-            let now = Date()
-            self.lingerUntil = self.lingerUntil.filter { $0.value > now }
+        scheduleLingerExpiry()
+    }
+
+    private func scheduleLingerExpiry() {
+        guard lingerTimer == nil, let next = lingerUntil.values.min() else { return }
+        let delay = max(next.timeIntervalSinceNow, 0) + 0.1
+        lingerTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.lingerTimer = nil
+                let now = Date()
+                self.lingerUntil = self.lingerUntil.filter { $0.value > now }
+                self.scheduleLingerExpiry()
+            }
         }
     }
 
     // MARK: Property listeners
 
-    private struct ListenerKey: Hashable { let id: AudioObjectID; let selector: AudioObjectPropertySelector }
+    private struct ListenerKey: Hashable {
+        let id: AudioObjectID
+        let selector: AudioObjectPropertySelector
+    }
     private var listeners: [ListenerKey: (AudioObjectPropertyAddress, AudioObjectPropertyListenerBlock)] = [:]
 
     private func listen(_ selector: AudioObjectPropertySelector, on objectID: AudioObjectID) {
@@ -56,7 +113,6 @@ final class AudioProcessController: ObservableObject {
         let isProcess = objectID != .system
         let isDeviceChange = selector == kAudioHardwarePropertyDefaultOutputDevice
         let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
-            log.debug("Listener fired: \(selector.fourCC, privacy: .public) on \(objectID)")
             Task { @MainActor in
                 guard let self else { return }
                 if isProcess { self.noteActivity(objectID) }
@@ -83,7 +139,6 @@ final class AudioProcessController: ObservableObject {
     /// Every output device carries its own set of per-app volumes. Switching
     /// device (AirPods ↔ speakers) swaps the whole profile and rebuilds taps,
     /// which are bound to the device they were created on.
-    @Published private(set) var outputDeviceUID: String = ""
     @Published private(set) var outputDeviceName: String = ""
 
     private func readOutputDevice() -> (uid: String, name: String) {
@@ -97,9 +152,9 @@ final class AudioProcessController: ObservableObject {
 
     private func handleOutputDeviceChange() {
         let dev = readOutputDevice()
-        guard dev.uid != outputDeviceUID else { return }
+        guard dev.uid != settings.deviceUID else { return }
         log.info("Output device changed to \(dev.name, privacy: .public)")
-        outputDeviceUID = dev.uid
+        settings.deviceUID = dev.uid
         outputDeviceName = dev.name
         // Drop everything: taps point at the old device, volumes belong to the old profile.
         for (_, tap) in taps { halQueue.async { tap.invalidate() } }
@@ -107,234 +162,61 @@ final class AudioProcessController: ObservableObject {
         volumes = [:]
         muted = []
         tapErrors = [:]
+        restoredIDs = []
         reload()
-    }
-
-    private func volumeKey(_ bundleID: String) -> String { "wavern.vol.\(outputDeviceUID).\(bundleID)" }
-    private func mutedKey(_ bundleID: String) -> String { "wavern.muted.\(outputDeviceUID).\(bundleID)" }
-
-    // MARK: Now playing
-
-    @Published private(set) var nowPlaying: [AudioObjectID: NowPlaying] = [:]
-    private var nowPlayingRefreshInFlight = false
-
-    func nowPlaying(for process: AudioProcess) -> NowPlaying? { nowPlaying[process.id] }
-
-    // MARK: Artwork
-
-    @Published private(set) var artworkImages: [AudioObjectID: NSImage] = [:]
-    private var artworkCache: [String: NSImage] = [:]
-
-    private func artworkCacheKey(for np: NowPlaying) -> String { "\(np.artist)∙\(np.title)" }
-
-    private func fetchSpotifyArtwork(for id: AudioObjectID, urlString: String, cacheKey: String) {
-        guard let url = URL(string: urlString) else { return }
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
-            guard let data, let image = NSImage(data: data) else { return }
-            Task { @MainActor in
-                guard let self else { return }
-                self.artworkCache[cacheKey] = image
-                self.artworkImages[id] = image
-            }
-        }.resume()
-    }
-
-    // MARK: Browser tabs
-
-    let browserTabStore = BrowserTabStore()
-
-    // MARK: Transport
-
-    func sendMediaCommand(_ command: NowPlayingService.Command, to process: AudioProcess) {
-        guard let bundleID = process.resolvedBundleID,
-              NowPlayingService.supports(bundleID) else { return }
-        if command == .playPause, let current = nowPlaying[process.id] {
-            nowPlaying[process.id] = NowPlaying(title: current.title, artist: current.artist,
-                                                 album: current.album, isPlaying: !current.isPlaying)
-        }
-        Task.detached(priority: .userInitiated) { [weak self] in
-            NowPlayingService.send(command, bundleID: bundleID)
-            try? await Task.sleep(nanoseconds: 350_000_000)
-            await MainActor.run { self?.refreshNowPlaying() }
-        }
-    }
-
-    // MARK: Smart media keys
-
-    /// Route media keys to the app that is actually making sound (or was, most
-    /// recently) instead of whatever macOS thinks is "Now Playing".
-    @Published var mediaKeysEnabled: Bool = UserDefaults.standard.bool(forKey: "wavern.mediaKeys") {
-        didSet {
-            UserDefaults.standard.set(mediaKeysEnabled, forKey: "wavern.mediaKeys")
-            if mediaKeysEnabled {
-                if !MediaKeyTap.shared.start(promptIfNeeded: true) { mediaKeysNeedPermission = true }
-            } else {
-                MediaKeyTap.shared.stop()
-                mediaKeysNeedPermission = false
-            }
-        }
-    }
-    @Published private(set) var mediaKeysNeedPermission = false
-
-    private func startMediaKeysIfEnabled() {
-        MediaKeyTap.shared.handler = { [weak self] command in
-            self?.handleMediaKey(command) ?? false
-        }
-        guard mediaKeysEnabled else { return }
-        mediaKeysNeedPermission = !MediaKeyTap.shared.start(promptIfNeeded: false)
-    }
-
-    /// Retry after the user grants Accessibility (permission changes don't notify us).
-    func retryMediaKeys() {
-        guard mediaKeysEnabled else { return }
-        mediaKeysNeedPermission = !MediaKeyTap.shared.start(promptIfNeeded: true)
-    }
-
-    /// Pick the target: a supported app currently outputting audio, else the
-    /// supported app that played most recently (linger window). nil = let macOS handle it.
-    func mediaKeyTarget() -> AudioProcess? {
-        let candidates = processes.filter { NowPlayingService.supports($0.resolvedBundleID) }
-        if let live = candidates.first(where: \.isPlaying) { return live }
-        return candidates
-            .filter { lingerUntil[$0.id] != nil }
-            .max { (lingerUntil[$0.id] ?? .distantPast) < (lingerUntil[$1.id] ?? .distantPast) }
-    }
-
-    private func handleMediaKey(_ command: NowPlayingService.Command) -> Bool {
-        guard let target = mediaKeyTarget() else {
-            log.info("Media key \(String(describing: command), privacy: .public): no target, passing through")
-            return false
-        }
-        log.info("Media key \(String(describing: command), privacy: .public) → \(target.name, privacy: .public)")
-        sendMediaCommand(command, to: target)
-        return true
     }
 
     // MARK: Volume state
 
+    static let maxGain: Float = 2.0
+
     private var taps: [AudioObjectID: ProcessTap] = [:]
+    /// Processes whose saved state has been loaded (reset on device change).
+    private var restoredIDs: Set<AudioObjectID> = []
     @Published private(set) var volumes: [AudioObjectID: Float] = [:]
     @Published private(set) var muted: Set<AudioObjectID> = []
     @Published private(set) var tapErrors: [AudioObjectID: String] = [:]
-
-    @Published private(set) var audioPermissionGranted: Bool =
-        UserDefaults.standard.bool(forKey: "wavern.hasGrantedAudioTap")
-
-    static let maxGain: Float = 2.0
+    @Published private(set) var audioPermissionGranted: Bool
 
     func volume(for process: AudioProcess) -> Float { volumes[process.id] ?? 1.0 }
     func isMuted(_ process: AudioProcess) -> Bool { muted.contains(process.id) }
+    func hasTap(_ process: AudioProcess) -> Bool { taps[process.id] != nil }
 
     func setVolume(_ value: Float, for process: AudioProcess) {
         volumes[process.id] = value
         if value > 0 { muted.remove(process.id) }
-        if let b = process.resolvedBundleID {
-            for key in [volumeKey(b), "wavern.vol.\(b)"] { UserDefaults.standard.set(value, forKey: key) }
-            for key in [mutedKey(b), "wavern.muted.\(b)"] { UserDefaults.standard.set(false, forKey: key) }
-        }
+        if let b = process.resolvedBundleID { settings.setVolume(value, for: b) }
         applyGain(for: process)
     }
 
     func toggleMute(_ process: AudioProcess) {
-        if muted.contains(process.id) { muted.remove(process.id) }
-        else { muted.insert(process.id) }
-        if let b = process.resolvedBundleID {
-            for key in [mutedKey(b), "wavern.muted.\(b)"] {
-                UserDefaults.standard.set(muted.contains(process.id), forKey: key)
-            }
-        }
+        let nowMuted = !muted.contains(process.id)
+        if nowMuted { muted.insert(process.id) } else { muted.remove(process.id) }
+        if let b = process.resolvedBundleID { settings.setMuted(nowMuted, for: b) }
         applyGain(for: process)
     }
 
-    private func applyGain(for process: AudioProcess) {
+    /// Push the effective gain (volume × mute × ducking) to the process's tap,
+    /// creating the tap if needed.
+    func applyGain(for process: AudioProcess) {
         var effective: Float = muted.contains(process.id) ? 0 : (volumes[process.id] ?? 1.0)
-        if isDucking && !isDucker(process) { effective *= duckLevel }
+        if isDucked(process) { effective *= duckLevel }
         guard let tap = ensureTap(for: process) else { return }
         tap.gain = effective
     }
 
-    // MARK: Ducking
-
-    /// Apps whose audio should lower everything else by default (calls/voice).
-    static let defaultDuckers: Set<String> = [
-        "us.zoom.xos", "com.microsoft.teams2", "com.microsoft.teams",
-        "com.apple.FaceTime", "com.hnc.Discord", "com.tinyspeck.slackmacgap",
-        "com.cisco.webexmeetingsapp", "com.google.Chrome.app.kjgfgldnnfoeklkmfkjfagphfepbbdan",
-    ]
-    static let duckLevels: [Float] = [1.0, 0.5, 0.3, 0.15]   // 1.0 = off
-
-    /// Multiplier applied to non-ducker apps while a ducker is playing. 1.0 = off.
-    @Published var duckLevel: Float = (UserDefaults.standard.object(forKey: "wavern.duckLevel") as? Float) ?? 0.3 {
-        didSet {
-            UserDefaults.standard.set(duckLevel, forKey: "wavern.duckLevel")
-            updateDucking()
-            reapplyAllGains()
-        }
-    }
-    @Published private(set) var isDucking = false
-    private var duckReleaseWork: DispatchWorkItem?
-
-    func isDucker(_ process: AudioProcess) -> Bool {
-        guard let b = process.resolvedBundleID else { return false }
-        return (UserDefaults.standard.object(forKey: "wavern.ducker.\(b)") as? Bool)
-            ?? Self.defaultDuckers.contains(b)
-    }
-
-    func toggleDucker(_ process: AudioProcess) {
-        guard let b = process.resolvedBundleID else { return }
-        UserDefaults.standard.set(!isDucker(process), forKey: "wavern.ducker.\(b)")
-        objectWillChange.send()
-        updateDucking()
-        reapplyAllGains()
-    }
-
-    func isDucked(_ process: AudioProcess) -> Bool { isDucking && !isDucker(process) }
-
-    private func updateDucking() {
-        let active = processes.contains { $0.isPlaying && isDucker($0) }
-        if active && duckLevel < 1 {
-            duckReleaseWork?.cancel()
-            duckReleaseWork = nil
-            setDucking(true)
-        } else if isDucking, duckReleaseWork == nil {
-            // Short hold so brief silences in a call don't pump the music up and down.
-            let work = DispatchWorkItem { [weak self] in
-                self?.duckReleaseWork = nil
-                self?.setDucking(false)
-            }
-            duckReleaseWork = work
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: work)
-        }
-    }
-
-    private func setDucking(_ on: Bool) {
-        guard isDucking != on else { return }
-        isDucking = on
-        log.info("Ducking \(on ? "on" : "off", privacy: .public) (level \(self.duckLevel))")
-        reapplyAllGains()
-    }
-
-    /// Re-push gain to every app that is playing or already tapped.
-    private func reapplyAllGains() {
-        for p in processes where p.isPlaying || taps[p.id] != nil {
-            // Don't create taps for duckers themselves just because ducking toggled.
-            if taps[p.id] == nil && isDucker(p) { continue }
-            applyGain(for: p)
-        }
-    }
-
+    /// Load saved volume/mute once per process. Apps with a non-default level
+    /// get their tap created immediately ("proactive tap"), so the very next
+    /// sound already comes out at the saved level.
     private func restorePersistedState(for process: AudioProcess) {
+        guard !restoredIDs.contains(process.id) else { return }
+        restoredIDs.insert(process.id)
         guard let bundleID = process.resolvedBundleID else { return }
-        guard volumes[process.id] == nil else { return }
-        let d = UserDefaults.standard
-        let v = (d.object(forKey: volumeKey(bundleID)) ?? d.object(forKey: "wavern.vol.\(bundleID)")) as? Float
-        if let v { volumes[process.id] = v }
-        let isMuted = (d.object(forKey: mutedKey(bundleID)) ?? d.object(forKey: "wavern.muted.\(bundleID)")) as? Bool ?? false
-        if isMuted { muted.insert(process.id) }
-        // Proactive tap: apps with a saved non-unity volume get tapped as soon as
-        // their process object exists, so the very next sound already comes out
-        // at the saved level (no need to wait for the user to touch the slider).
-        if (v != nil && v != 1) || isMuted { applyGain(for: process) }
+        let saved = settings.volume(for: bundleID)
+        let savedMuted = settings.isMuted(bundleID)
+        if let saved { volumes[process.id] = saved }
+        if savedMuted { muted.insert(process.id) }
+        if (saved != nil && saved != 1) || savedMuted { applyGain(for: process) }
     }
 
     private func ensureTap(for process: AudioProcess) -> ProcessTap? {
@@ -352,11 +234,9 @@ final class AudioProcessController: ObservableObject {
                 let message = String(describing: error)
                 log.error("Tap activation failed for \(name, privacy: .public): \(message, privacy: .public)")
                 Task { @MainActor in
-                    guard let self else { return }
-                    if self.taps[id] === tap {
-                        self.taps.removeValue(forKey: id)
-                        self.tapErrors[id] = message
-                    }
+                    guard let self, self.taps[id] === tap else { return }
+                    self.taps.removeValue(forKey: id)
+                    self.tapErrors[id] = message
                 }
             }
         }
@@ -366,22 +246,25 @@ final class AudioProcessController: ObservableObject {
     private func rememberPermissionGranted() {
         guard !audioPermissionGranted else { return }
         audioPermissionGranted = true
-        UserDefaults.standard.set(true, forKey: "wavern.hasGrantedAudioTap")
+        settings.hasGrantedAudioTap = true
     }
 
-    private func pruneVanishedTaps(livingIDs: Set<AudioObjectID>) {
+    private func pruneVanished(livingIDs: Set<AudioObjectID>) {
         for (id, tap) in taps where !livingIDs.contains(id) {
             halQueue.async { tap.invalidate() }
             taps.removeValue(forKey: id)
-            volumes.removeValue(forKey: id)
-            muted.remove(id)
-            tapErrors.removeValue(forKey: id)
         }
+        volumes = volumes.filter { livingIDs.contains($0.key) }
+        muted = muted.filter { livingIDs.contains($0) }
+        tapErrors = tapErrors.filter { livingIDs.contains($0.key) }
+        restoredIDs = restoredIDs.filter { livingIDs.contains($0) }
+        lingerUntil = lingerUntil.filter { livingIDs.contains($0.key) }
         for id in Set(listeners.keys.map(\.id)) where id != .system && !livingIDs.contains(id) {
             unlisten(id)
-            lingerUntil.removeValue(forKey: id)
         }
     }
+
+    // MARK: Lifecycle
 
     private var started = false
 
@@ -391,7 +274,7 @@ final class AudioProcessController: ObservableObject {
         log.info("Wavern starting")
         halQueue.async { ProcessTap.reapLeakedDevices() }
         let dev = readOutputDevice()
-        outputDeviceUID = dev.uid
+        settings.deviceUID = dev.uid
         outputDeviceName = dev.name
         listen(kAudioHardwarePropertyProcessObjectList, on: .system)
         listen(kAudioHardwarePropertyDefaultOutputDevice, on: .system)
@@ -399,8 +282,17 @@ final class AudioProcessController: ObservableObject {
         reload()
     }
 
-    // MARK: Live updates
+    func willTerminate() {
+        settings.flush()
+    }
 
+    // MARK: Live updates (menu open)
+
+    private var pollTimer: Timer?
+    private let pollInterval: TimeInterval = 1.0
+
+    /// Detection is event-driven; this poll only keeps now-playing metadata and
+    /// browser tabs fresh while the menu is visible.
     func beginLiveUpdates() {
         reload()
         pollTimer?.invalidate()
@@ -416,99 +308,44 @@ final class AudioProcessController: ObservableObject {
 
     // MARK: Enumeration
 
+    private var reloadInFlight = false
+    private var reloadPending = false
+
     func reload() {
         guard !reloadInFlight else { reloadPending = true; return }
         reloadInFlight = true
         halQueue.async { [weak self] in
             let result = Self.enumerateProcesses()
-            Task { @MainActor in
-                guard let self else { return }
-                self.reloadInFlight = false
-                let previouslyPlaying = Set(self.processes.filter(\.isPlaying).map(\.id))
-                self.processes = result
-                let playingNames = result.filter(\.isPlaying).map(\.name).joined(separator: ", ")
-                log.debug("Reload: \(result.count) processes, playing: [\(playingNames, privacy: .public)]")
-                for process in result {
-                    // HAL only notifies IsRunning reliably; IsRunningOutput is read on reload.
-                    self.listen(kAudioProcessPropertyIsRunning, on: process.id)
-                    self.listen(kAudioProcessPropertyIsRunningOutput, on: process.id)
-                    if process.isPlaying && !(previouslyPlaying.contains(process.id)) {
-                        self.noteActivity(process.id)
-                    }
-                    self.restorePersistedState(for: process)
-                }
-                let living = Set(result.map(\.id))
-                self.pruneVanishedTaps(livingIDs: living)
-                self.updateDucking()
-                if self.reloadPending { self.reloadPending = false; self.reload() }
-                self.nowPlaying = self.nowPlaying.filter { living.contains($0.key) }
-                self.refreshNowPlaying()
-                self.browserTabStore.refresh()
-            }
+            Task { @MainActor in self?.apply(result) }
         }
     }
 
-    private func refreshNowPlaying() {
-        guard !nowPlayingRefreshInFlight else { return }
-        let targets: [(id: AudioObjectID, bundleID: String)] = playing.compactMap { process in
-            guard let bundleID = process.resolvedBundleID,
-                  NowPlayingService.supports(bundleID) else { return nil }
-            return (process.id, bundleID)
-        }
-        let playingIDs = Set(targets.map(\.id))
-        if nowPlaying.keys.contains(where: { !playingIDs.contains($0) }) {
-            nowPlaying = nowPlaying.filter { playingIDs.contains($0.key) }
-        }
-        guard !targets.isEmpty else { return }
-        nowPlayingRefreshInFlight = true
-        Task.detached(priority: .userInitiated) { [weak self] in
-            var fetched: [AudioObjectID: NowPlaying] = [:]
-            for target in targets {
-                if var info = NowPlayingService.fetch(bundleID: target.bundleID) {
-                    if let data = NowPlayingService.fetchArtworkData(bundleID: target.bundleID) {
-                        info.artworkData = data
-                    }
-                    fetched[target.id] = info
-                }
+    private func apply(_ result: [AudioProcess]) {
+        reloadInFlight = false
+        let previouslyPlaying = Set(processes.filter(\.isPlaying).map(\.id))
+        processes = result
+        let living = Set(result.map(\.id))
+        for process in result {
+            // HAL only notifies IsRunning reliably; IsRunningOutput is read on reload.
+            listen(kAudioProcessPropertyIsRunning, on: process.id)
+            listen(kAudioProcessPropertyIsRunningOutput, on: process.id)
+            if process.isPlaying && !previouslyPlaying.contains(process.id) {
+                noteActivity(process.id)
             }
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                self.nowPlayingRefreshInFlight = false
-                for (id, info) in fetched { self.nowPlaying[id] = info }
-                for id in playingIDs where fetched[id] == nil {
-                    self.nowPlaying.removeValue(forKey: id)
-                }
-                for (id, info) in fetched {
-                    let key = self.artworkCacheKey(for: info)
-                    if let cached = self.artworkCache[key] {
-                        self.artworkImages[id] = cached
-                    } else if let data = info.artworkData, let img = NSImage(data: data) {
-                        self.artworkCache[key] = img
-                        self.artworkImages[id] = img
-                    } else if let urlStr = info.artworkURLString {
-                        self.fetchSpotifyArtwork(for: id, urlString: urlStr, cacheKey: key)
-                    }
-                }
-                let liveKeys = Set(fetched.values.map { self.artworkCacheKey(for: $0) })
-                self.artworkCache = self.artworkCache.filter { liveKeys.contains($0.key) }
-                for id in self.artworkImages.keys where fetched[id] == nil {
-                    self.artworkImages.removeValue(forKey: id)
-                }
-            }
+            restorePersistedState(for: process)
         }
+        pruneVanished(livingIDs: living)
+        updateDucking()
+        refreshNowPlaying(living: living)
+        browserTabStore.refresh()
+        if reloadPending { reloadPending = false; reload() }
     }
 
     nonisolated private static func enumerateProcesses() -> [AudioProcess] {
         do {
             let objectIDs: [AudioObjectID] = try AudioObjectID.system.readArray(
                 kAudioHardwarePropertyProcessObjectList)
-            var result: [AudioProcess] = []
-            result.reserveCapacity(objectIDs.count)
-            for objectID in objectIDs where objectID.isValid {
-                guard let process = makeProcess(objectID) else { continue }
-                result.append(process)
-            }
-            return result
+            return objectIDs.compactMap { $0.isValid ? makeProcess($0) : nil }
         } catch {
             log.error("Failed to read process list: \(String(describing: error))")
             return []
@@ -527,3 +364,4 @@ final class AudioProcessController: ObservableObject {
                             isPlaying: isRunningOutput != 0)
     }
 }
+
