@@ -21,7 +21,7 @@ struct WaveformView: View {
                     ctx.fill(
                         Path(roundedRect: CGRect(x: x, y: y, width: barW, height: h),
                              cornerRadius: 1.5),
-                        with: .color(.secondary)
+                        with: .color(isAnimating ? .accentColor : .secondary)
                     )
                 }
             }

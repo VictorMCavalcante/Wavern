@@ -1,11 +1,18 @@
 {
   "manifest_version": 3,
   "name": "Wavern Tab Bridge",
-  "version": "1.0",
-  "description": "Reports audible tabs to Wavern for richer audio mixing.",
+  "version": "1.1",
+  "description": "Reports audible tabs to Wavern and applies per-tab volume.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsg60knaQaAeFngwsCIpYWMYQhUT76Rg3eGHQwLKPfHncEmEvHnMphfn/VIAiokle2CE2pz1wTDaCns4uNsn2ASVq5uy4J16LBpUdi+pcXPgZN/C6m4Ko0mW0G0cJ3Pjs8VChOEN1CD7MVlkZa/X36aY1/uqXGM2NZGpdU6i54Vr/ofnrC0LhUTZVUDnd12oAWw+rXfkqIN4w5Jv/j+AvtgJmroeBUOipe84veaT1vh0MI+7fJparaC8AOg548hrV23ar7WT+bI3eDgdJz42K6ZI8/E6NUVXFsOFg5IrCi0I07cfgAJbLO9t1pmimsotUcP/asLzUGDTHkx4l+alLwwIDAQAB",
-  "permissions": ["tabs", "nativeMessaging"],
+  "permissions": [
+    "tabs",
+    "nativeMessaging",
+    "scripting"
+  ],
   "background": {
     "service_worker": "background.js"
-  }
+  },
+  "host_permissions": [
+    "<all_urls>"
+  ]
 }

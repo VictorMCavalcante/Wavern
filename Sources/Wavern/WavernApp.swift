@@ -14,7 +14,7 @@ struct WavernApp: App {
                 .environmentObject(controller.browserTabStore)
                 .environmentObject(updateChecker)
         } label: {
-            if controller.playing.isEmpty {
+            if !controller.isAnyPlaying {
                 Image(systemName: "speaker.wave.2.fill")
             } else {
                 Image(systemName: "waveform")

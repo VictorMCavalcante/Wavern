@@ -11,6 +11,7 @@
 		24BFAB1EEE185B5D69169959 /* CoreAudioUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C943034C6A7A98265F3307E /* CoreAudioUtils.swift */; };
 		27085E3225792DD8E035E848 /* AudioProcess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B0EC02F9142D15E4397471 /* AudioProcess.swift */; };
 		467584012C28E5C5E9FEB491 /* BrowserBridgeInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83D480BB4DE6C2455A321504 /* BrowserBridgeInstaller.swift */; };
+		59E45D2BB7802F9A293D0E97 /* BrowserExtension in Resources */ = {isa = PBXBuildFile; fileRef = 6E297538ACD3009A6EB79AC3 /* BrowserExtension */; };
 		5D5B3C6CA15B9CCCCB1AE34A /* WavernApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FEA11F006061032C5B771C3 /* WavernApp.swift */; };
 		755F42BEBFBEBBB38D1B82F0 /* NowPlayingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F19BBC9BA05940DEEA93AC98 /* NowPlayingService.swift */; };
 		800CA13254057718521EC431 /* BrowserTabStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F0981085AEEB976F70F6382 /* BrowserTabStore.swift */; };
@@ -20,9 +21,21 @@
 		BA0612CF8309913EE4976C12 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F6EEEA8AFBDBF7DEB72041E /* WaveformView.swift */; };
 		C7FA37490956726960AB2151 /* VisualEffectBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49E930E7DF36532A4F421406 /* VisualEffectBackground.swift */; };
 		CA1EAA51FEF6AAE04BDDB3A9 /* NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6CC1D2A940FFE711E13D79 /* NowPlaying.swift */; };
+		CE36340F044DC96D4A129A1A /* UpdateChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7B128B69EA6BF86B72F347F /* UpdateChecker.swift */; };
 		D4A57468A209A95A4C9CECDF /* LoginItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88A81F8F92282BC24A0BE96D /* LoginItem.swift */; };
 		E00831A8E4A832E238B863CC /* ProcessTap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 287FD31EB0EC9B6C4AA60ADF /* ProcessTap.swift */; };
+		F9943FF85C10DB7DD492CF4C /* MediaKeyTap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F23835A42207630BFBF5B9F /* MediaKeyTap.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C1A2D954955B1881F11B0B16 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E5C341BE7903A377918890F5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C8B8C68550CD0D6C2D7DEAD0;
+			remoteInfo = WavernBrowserBridge;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		25627438337AAA1CAFA22666 /* Wavern.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Wavern.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -31,9 +44,11 @@
 		2FEA11F006061032C5B771C3 /* WavernApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WavernApp.swift; sourceTree = "<group>"; };
 		49E930E7DF36532A4F421406 /* VisualEffectBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectBackground.swift; sourceTree = "<group>"; };
 		50DB04547613AC0960597D85 /* MenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuView.swift; sourceTree = "<group>"; };
+		5F23835A42207630BFBF5B9F /* MediaKeyTap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaKeyTap.swift; sourceTree = "<group>"; };
 		61C38249A6A3AD4EF0D6FDAF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		62B0EC02F9142D15E4397471 /* AudioProcess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioProcess.swift; sourceTree = "<group>"; };
 		6D6CC1D2A940FFE711E13D79 /* NowPlaying.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlaying.swift; sourceTree = "<group>"; };
+		6E297538ACD3009A6EB79AC3 /* BrowserExtension */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BrowserExtension; path = Sources/BrowserExtension; sourceTree = SOURCE_ROOT; };
 		6F0981085AEEB976F70F6382 /* BrowserTabStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserTabStore.swift; sourceTree = "<group>"; };
 		78D2D194EE570EE6016A6CBF /* AudioProcessController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioProcessController.swift; sourceTree = "<group>"; };
 		7C943034C6A7A98265F3307E /* CoreAudioUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreAudioUtils.swift; sourceTree = "<group>"; };
@@ -41,6 +56,7 @@
 		88A81F8F92282BC24A0BE96D /* LoginItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItem.swift; sourceTree = "<group>"; };
 		A0D95E3D243D2AC61FF4E9CE /* MarqueeText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarqueeText.swift; sourceTree = "<group>"; };
 		B06C10CEB7D95B6074E1C2CA /* Wavern.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Wavern.entitlements; sourceTree = "<group>"; };
+		D7B128B69EA6BF86B72F347F /* UpdateChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChecker.swift; sourceTree = "<group>"; };
 		D850AFD5F1A4CA512948BA72 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		F19BBC9BA05940DEEA93AC98 /* NowPlayingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingService.swift; sourceTree = "<group>"; };
 		F3153052F81B21C4F34FB0DF /* WavernBrowserBridge */ = {isa = PBXFileReference; includeInIndex = 0; path = WavernBrowserBridge; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -50,6 +66,7 @@
 		5027E2B42AF18456577500B4 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				6E297538ACD3009A6EB79AC3 /* BrowserExtension */,
 				F2FFF64E84FB0BB7B8B1B116 /* Wavern */,
 				9E48A564631C435528E0E0C7 /* WavernBrowserBridge */,
 			);
@@ -83,10 +100,12 @@
 				61C38249A6A3AD4EF0D6FDAF /* Info.plist */,
 				88A81F8F92282BC24A0BE96D /* LoginItem.swift */,
 				A0D95E3D243D2AC61FF4E9CE /* MarqueeText.swift */,
+				5F23835A42207630BFBF5B9F /* MediaKeyTap.swift */,
 				50DB04547613AC0960597D85 /* MenuView.swift */,
 				6D6CC1D2A940FFE711E13D79 /* NowPlaying.swift */,
 				F19BBC9BA05940DEEA93AC98 /* NowPlayingService.swift */,
 				287FD31EB0EC9B6C4AA60ADF /* ProcessTap.swift */,
+				D7B128B69EA6BF86B72F347F /* UpdateChecker.swift */,
 				49E930E7DF36532A4F421406 /* VisualEffectBackground.swift */,
 				2F6EEEA8AFBDBF7DEB72041E /* WaveformView.swift */,
 				B06C10CEB7D95B6074E1C2CA /* Wavern.entitlements */,
@@ -129,10 +148,13 @@
 			buildConfigurationList = EE2AB22553F1FD26F08AA0A7 /* Build configuration list for PBXNativeTarget "Wavern" */;
 			buildPhases = (
 				C37FEF4A886CBDFBB7CA227A /* Sources */,
+				59F133F64BCBB34C892E6D97 /* Resources */,
+				16680FCBC3993685DA148F4D /* Copy WavernBrowserBridge into app bundle */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				EDAE29068E76B4D5E434CAA7 /* PBXTargetDependency */,
 			);
 			name = Wavern;
 			packageProductDependencies = (
@@ -180,6 +202,39 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		59F133F64BCBB34C892E6D97 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				59E45D2BB7802F9A293D0E97 /* BrowserExtension in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		16680FCBC3993685DA148F4D /* Copy WavernBrowserBridge into app bundle */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Copy WavernBrowserBridge into app bundle";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "cp \"${BUILT_PRODUCTS_DIR}/WavernBrowserBridge\" \"${CODESIGNING_FOLDER_PATH}/Contents/MacOS/\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		56FF253C073E38D42EF8B3DB /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -200,10 +255,12 @@
 				24BFAB1EEE185B5D69169959 /* CoreAudioUtils.swift in Sources */,
 				D4A57468A209A95A4C9CECDF /* LoginItem.swift in Sources */,
 				077AB3EF024FE0F1CDD30A54 /* MarqueeText.swift in Sources */,
+				F9943FF85C10DB7DD492CF4C /* MediaKeyTap.swift in Sources */,
 				AF6ECF2E1F77871245C08421 /* MenuView.swift in Sources */,
 				CA1EAA51FEF6AAE04BDDB3A9 /* NowPlaying.swift in Sources */,
 				755F42BEBFBEBBB38D1B82F0 /* NowPlayingService.swift in Sources */,
 				E00831A8E4A832E238B863CC /* ProcessTap.swift in Sources */,
+				CE36340F044DC96D4A129A1A /* UpdateChecker.swift in Sources */,
 				C7FA37490956726960AB2151 /* VisualEffectBackground.swift in Sources */,
 				BA0612CF8309913EE4976C12 /* WaveformView.swift in Sources */,
 				5D5B3C6CA15B9CCCCB1AE34A /* WavernApp.swift in Sources */,
@@ -211,6 +268,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		EDAE29068E76B4D5E434CAA7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C8B8C68550CD0D6C2D7DEAD0 /* WavernBrowserBridge */;
+			targetProxy = C1A2D954955B1881F11B0B16 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		6CCC5D211A24B80FA63A6479 /* Release */ = {
@@ -286,7 +351,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.3.2;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -368,7 +433,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.3.2;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
