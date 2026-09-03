@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/VictorMCavalcante/Wavern/compare/v1.3.2...v1.4.0) (2026-09-03)
+
+
+### Features
+
+* event-driven detection, ducking, per-device profiles, media keys, per-tab volume ([6445e7e](https://github.com/VictorMCavalcante/Wavern/commit/6445e7e55e48e6802a7f26586eeca59b6e0e553e))
+
 ## [1.3.2](https://github.com/VictorMCavalcante/Wavern/compare/v1.3.1...v1.3.2) (2026-09-02)
 
 
