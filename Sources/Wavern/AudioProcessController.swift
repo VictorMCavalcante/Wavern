@@ -18,6 +18,10 @@ final class AudioProcessController: ObservableObject {
     let settings = SettingsStore()
     let browserTabStore: BrowserTabStore
     let halQueue = DispatchQueue(label: "com.wavern.hal", qos: .userInitiated)
+    /// Property notifications are delivered here, never on `halQueue`: a single
+    /// HAL call can hang for coreaudiod's 30 s timeout, and the device-change
+    /// notification must not queue behind it.
+    let listenerQueue = DispatchQueue(label: "com.wavern.listeners", qos: .userInitiated)
 
     init() {
         browserTabStore = BrowserTabStore(settings: settings)
@@ -37,6 +41,15 @@ final class AudioProcessController: ObservableObject {
     // +MediaKeys
     @Published var mediaKeysEnabled: Bool { didSet { mediaKeysEnabledDidChange() } }
     @Published private(set) var mediaKeysNeedPermission = false
+
+    // +OutputDevice
+    @Published private(set) var outputDevices: [OutputDevice] = []
+    /// nil when the current device has no settable main volume.
+    @Published private(set) var masterVolume: Float?
+    var outputDeviceID: AudioObjectID = .unknown
+
+    func setOutputDevices(_ v: [OutputDevice]) { outputDevices = v }
+    func setMasterVolumeState(_ v: Float?) { masterVolume = v }
 
     // +NowPlaying
     @Published private(set) var nowPlaying: [AudioObjectID: NowPlaying] = [:]
@@ -104,22 +117,18 @@ final class AudioProcessController: ObservableObject {
     }
     private var listeners: [ListenerKey: (AudioObjectPropertyAddress, AudioObjectPropertyListenerBlock)] = [:]
 
-    private func listen(_ selector: AudioObjectPropertySelector, on objectID: AudioObjectID) {
+    func listen(_ selector: AudioObjectPropertySelector, on objectID: AudioObjectID,
+                scope: AudioObjectPropertyScope = kAudioObjectPropertyScopeGlobal,
+                action: @escaping @MainActor () -> Void) {
         let key = ListenerKey(id: objectID, selector: selector)
         guard listeners[key] == nil else { return }
         var address = AudioObjectPropertyAddress(
-            mSelector: selector, mScope: kAudioObjectPropertyScopeGlobal,
+            mSelector: selector, mScope: scope,
             mElement: kAudioObjectPropertyElementMain)
-        let isProcess = objectID != .system
-        let isDeviceChange = selector == kAudioHardwarePropertyDefaultOutputDevice
-        let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
-            Task { @MainActor in
-                guard let self else { return }
-                if isProcess { self.noteActivity(objectID) }
-                if isDeviceChange { self.handleOutputDeviceChange() } else { self.reload() }
-            }
+        let block: AudioObjectPropertyListenerBlock = { _, _ in
+            Task { @MainActor in action() }
         }
-        let status = AudioObjectAddPropertyListenerBlock(objectID, &address, halQueue, block)
+        let status = AudioObjectAddPropertyListenerBlock(objectID, &address, listenerQueue, block)
         guard status == noErr else {
             log.error("Listener failed for \(selector.fourCC, privacy: .public) on \(objectID): \(status)")
             return
@@ -127,10 +136,17 @@ final class AudioProcessController: ObservableObject {
         listeners[key] = (address, block)
     }
 
-    private func unlisten(_ objectID: AudioObjectID) {
+    private func listenProcess(_ selector: AudioObjectPropertySelector, on objectID: AudioObjectID) {
+        listen(selector, on: objectID) { [weak self] in
+            self?.noteActivity(objectID)
+            self?.reload()
+        }
+    }
+
+    func unlisten(_ objectID: AudioObjectID) {
         for key in listeners.keys where key.id == objectID {
             guard var entry = listeners.removeValue(forKey: key) else { continue }
-            AudioObjectRemovePropertyListenerBlock(objectID, &entry.0, halQueue, entry.1)
+            AudioObjectRemovePropertyListenerBlock(objectID, &entry.0, listenerQueue, entry.1)
         }
     }
 
@@ -141,13 +157,13 @@ final class AudioProcessController: ObservableObject {
     /// which are bound to the device they were created on.
     @Published private(set) var outputDeviceName: String = ""
 
-    private func readOutputDevice() -> (uid: String, name: String) {
+    private func readOutputDevice() -> (id: AudioObjectID, uid: String, name: String) {
         guard let id: AudioObjectID = try? AudioObjectID.system.read(
                   kAudioHardwarePropertyDefaultOutputDevice, default: AudioObjectID.unknown),
-              id.isValid else { return ("", "") }
+              id.isValid else { return (.unknown, "", "") }
         let uid: String = (try? id.readCF(kAudioDevicePropertyDeviceUID)) ?? ""
         let name: String = (try? id.readCF(kAudioObjectPropertyName)) ?? ""
-        return (uid, name)
+        return (id, uid, name)
     }
 
     private func handleOutputDeviceChange() {
@@ -156,6 +172,7 @@ final class AudioProcessController: ObservableObject {
         log.info("Output device changed to \(dev.name, privacy: .public)")
         settings.deviceUID = dev.uid
         outputDeviceName = dev.name
+        attachOutputDevice(dev.id)
         // Drop everything: taps point at the old device, volumes belong to the old profile.
         for (_, tap) in taps { halQueue.async { tap.invalidate() } }
         taps = [:]
@@ -228,7 +245,12 @@ final class AudioProcessController: ObservableObject {
         let name = process.name
         halQueue.async { [weak self] in
             do {
+                let started = Date()
                 try tap.activate()
+                let elapsed = Date().timeIntervalSince(started)
+                if elapsed > 1 {
+                    log.error("Tap activation for \(name, privacy: .public) took \(elapsed, format: .fixed(precision: 1))s — coreaudiod stalled")
+                }
                 Task { @MainActor in self?.rememberPermissionGranted() }
             } catch {
                 let message = String(describing: error)
@@ -276,8 +298,12 @@ final class AudioProcessController: ObservableObject {
         let dev = readOutputDevice()
         settings.deviceUID = dev.uid
         outputDeviceName = dev.name
-        listen(kAudioHardwarePropertyProcessObjectList, on: .system)
-        listen(kAudioHardwarePropertyDefaultOutputDevice, on: .system)
+        attachOutputDevice(dev.id)
+        listen(kAudioHardwarePropertyProcessObjectList, on: .system) { [weak self] in self?.reload() }
+        listen(kAudioHardwarePropertyDefaultOutputDevice, on: .system) { [weak self] in
+            self?.handleOutputDeviceChange()
+        }
+        listen(kAudioHardwarePropertyDevices, on: .system) { [weak self] in self?.refreshOutputDevices() }
         startMediaKeysIfEnabled()
         reload()
     }
@@ -327,8 +353,8 @@ final class AudioProcessController: ObservableObject {
         let living = Set(result.map(\.id))
         for process in result {
             // HAL only notifies IsRunning reliably; IsRunningOutput is read on reload.
-            listen(kAudioProcessPropertyIsRunning, on: process.id)
-            listen(kAudioProcessPropertyIsRunningOutput, on: process.id)
+            listenProcess(kAudioProcessPropertyIsRunning, on: process.id)
+            listenProcess(kAudioProcessPropertyIsRunningOutput, on: process.id)
             if process.isPlaying && !previouslyPlaying.contains(process.id) {
                 noteActivity(process.id)
             }

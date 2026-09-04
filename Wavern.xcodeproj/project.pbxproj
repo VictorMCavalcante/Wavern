@@ -14,6 +14,7 @@
 		27812832DCF547DFCC5AFCA0 /* AudioProcessController+MediaKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5171837F44104565CE42D905 /* AudioProcessController+MediaKeys.swift */; };
 		4139E9CC24E51255F387574B /* ExtensionOnboardingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DA51BFE8966A9635453243 /* ExtensionOnboardingSheet.swift */; };
 		467584012C28E5C5E9FEB491 /* BrowserBridgeInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83D480BB4DE6C2455A321504 /* BrowserBridgeInstaller.swift */; };
+		5032DCBE54A0EBC80B960597 /* AudioProcessController+OutputDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A64529A679DC4E4029F2051 /* AudioProcessController+OutputDevice.swift */; };
 		52EBBE8344B009C20ADE0C1F /* AudioProcessController+NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FD6FBA6DADF8CFF731CED7F /* AudioProcessController+NowPlaying.swift */; };
 		59E45D2BB7802F9A293D0E97 /* BrowserExtension in Resources */ = {isa = PBXBuildFile; fileRef = 6E297538ACD3009A6EB79AC3 /* BrowserExtension */; };
 		5D5B3C6CA15B9CCCCB1AE34A /* WavernApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FEA11F006061032C5B771C3 /* WavernApp.swift */; };
@@ -59,6 +60,7 @@
 		5F23835A42207630BFBF5B9F /* MediaKeyTap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaKeyTap.swift; sourceTree = "<group>"; };
 		61C38249A6A3AD4EF0D6FDAF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		62B0EC02F9142D15E4397471 /* AudioProcess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioProcess.swift; sourceTree = "<group>"; };
+		6A64529A679DC4E4029F2051 /* AudioProcessController+OutputDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AudioProcessController+OutputDevice.swift"; sourceTree = "<group>"; };
 		6D6CC1D2A940FFE711E13D79 /* NowPlaying.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlaying.swift; sourceTree = "<group>"; };
 		6E297538ACD3009A6EB79AC3 /* BrowserExtension */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BrowserExtension; path = Sources/BrowserExtension; sourceTree = SOURCE_ROOT; };
 		6F0981085AEEB976F70F6382 /* BrowserTabStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserTabStore.swift; sourceTree = "<group>"; };
@@ -111,6 +113,7 @@
 				DA6A02BF3C99819DBAAB04CF /* AudioProcessController+Ducking.swift */,
 				5171837F44104565CE42D905 /* AudioProcessController+MediaKeys.swift */,
 				2FD6FBA6DADF8CFF731CED7F /* AudioProcessController+NowPlaying.swift */,
+				6A64529A679DC4E4029F2051 /* AudioProcessController+OutputDevice.swift */,
 				3C2D6B8C1050B89213804363 /* AudioProcessRow.swift */,
 				83D480BB4DE6C2455A321504 /* BrowserBridgeInstaller.swift */,
 				6F0981085AEEB976F70F6382 /* BrowserTabStore.swift */,
@@ -273,6 +276,7 @@
 				22B86BF3266F03A46FA65E61 /* AudioProcessController+Ducking.swift in Sources */,
 				27812832DCF547DFCC5AFCA0 /* AudioProcessController+MediaKeys.swift in Sources */,
 				52EBBE8344B009C20ADE0C1F /* AudioProcessController+NowPlaying.swift in Sources */,
+				5032DCBE54A0EBC80B960597 /* AudioProcessController+OutputDevice.swift in Sources */,
 				B968F85A62987BF4F6E4809A /* AudioProcessController.swift in Sources */,
 				69A1EA2C9D87CDA3D5757D66 /* AudioProcessRow.swift in Sources */,
 				467584012C28E5C5E9FEB491 /* BrowserBridgeInstaller.swift in Sources */,

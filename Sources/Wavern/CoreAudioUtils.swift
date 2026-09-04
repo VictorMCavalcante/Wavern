@@ -68,6 +68,18 @@ extension AudioObjectID {
         return value as? T
     }
 
+    // MARK: Writing
+
+    /// Writes a single fixed-size value.
+    func write<T>(_ value: T, _ selector: AudioObjectPropertySelector,
+                  scope: AudioObjectPropertyScope = kAudioObjectPropertyScopeGlobal,
+                  element: AudioObjectPropertyElement = kAudioObjectPropertyElementMain) throws {
+        var address = AudioObjectPropertyAddress(mSelector: selector, mScope: scope, mElement: element)
+        var value = value
+        let status = AudioObjectSetPropertyData(self, &address, 0, nil, UInt32(MemoryLayout<T>.size), &value)
+        guard status == noErr else { throw CoreAudioError.status(status, selector) }
+    }
+
     // MARK: Existence
 
     func hasProperty(_ selector: AudioObjectPropertySelector,

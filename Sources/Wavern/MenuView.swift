@@ -1,4 +1,5 @@
 import AppKit
+import CoreAudio
 import SwiftUI
 
 struct MenuView: View {
@@ -9,6 +10,10 @@ struct MenuView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if controller.masterVolume != nil {
+                masterVolumeRow
+                Divider().opacity(0.5)
+            }
             let playing = controller.playing
             if playing.isEmpty {
                 emptyState
@@ -31,6 +36,29 @@ struct MenuView: View {
         .background(VisualEffectBackground(material: .hudWindow, blendingMode: .behindWindow))
         .onAppear { controller.beginLiveUpdates() }
         .onDisappear { controller.endLiveUpdates() }
+    }
+
+    private var masterVolume: Binding<Double> {
+        Binding(
+            get: { Double(controller.masterVolume ?? 0) },
+            set: { controller.setMasterVolume(Float($0)) }
+        )
+    }
+
+    private var masterVolumeRow: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "speaker.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            VolumeSlider(value: masterVolume, maxValue: 1, isMuted: false)
+                .frame(height: 16)
+            Image(systemName: "speaker.wave.3.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .help("System output volume")
     }
 
     private var emptyState: some View {
@@ -70,21 +98,24 @@ struct MenuView: View {
                 .controlSize(.small)
                 .frame(width: 84)
             }
-            if !controller.outputDeviceName.isEmpty {
+            if !controller.outputDevices.isEmpty {
                 HStack(spacing: 6) {
-                    Image(systemName: deviceSymbol)
+                    Image(systemName: currentDevice?.symbol ?? "speaker.wave.2")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
-                    Text(controller.outputDeviceName)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    Picker("", selection: deviceSelection) {
+                        ForEach(controller.outputDevices) { device in
+                            Label(device.name, systemImage: device.symbol).tag(device.id)
+                        }
+                    }
+                    .labelsHidden()
+                    .controlSize(.small)
                     Spacer()
                     Text("volumes saved per device")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
-                .help("Each output device keeps its own per-app volumes.")
+                .help("Output device. Each device keeps its own per-app volumes.")
             }
             HStack(spacing: 6) {
                 Image(systemName: "playpause")
@@ -150,14 +181,15 @@ struct MenuView: View {
         .padding(.vertical, 8)
     }
 
-    private var deviceSymbol: String {
-        let n = controller.outputDeviceName.lowercased()
-        if n.contains("airpods") || n.contains("headphone") || n.contains("buds") || n.contains("headset") {
-            return "headphones"
-        }
-        if n.contains("hdmi") || n.contains("display") || n.contains("monitor") { return "display" }
-        if n.contains("bluetooth") || n.contains("speaker") { return "hifispeaker.fill" }
-        return "speaker.wave.2"
+    private var currentDevice: OutputDevice? {
+        controller.outputDevices.first { $0.id == controller.outputDeviceID }
+    }
+
+    private var deviceSelection: Binding<AudioObjectID> {
+        Binding(
+            get: { controller.outputDeviceID },
+            set: { controller.selectOutputDevice($0) }
+        )
     }
 
     private var launchAtLoginBinding: Binding<Bool> {
