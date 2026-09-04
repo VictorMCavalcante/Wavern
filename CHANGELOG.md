@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/VictorMCavalcante/Wavern/compare/v1.4.0...v1.5.0) (2026-09-04)
+
+
+### Features
+
+* output device picker and master volume slider; decouple HAL listeners ([c4e4f5b](https://github.com/VictorMCavalcante/Wavern/commit/c4e4f5ba1419cb2b228266087e4e1468409b3445))
+
 ## [1.4.0](https://github.com/VictorMCavalcante/Wavern/compare/v1.3.2...v1.4.0) (2026-09-03)
 
 
