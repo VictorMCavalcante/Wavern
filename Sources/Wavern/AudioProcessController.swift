@@ -243,6 +243,7 @@ final class AudioProcessController: ObservableObject {
         tapErrors[process.id] = nil
         let id = process.id
         let name = process.name
+        tap.onFirstIO = { [weak self] in self?.rememberPermissionGranted() }
         halQueue.async { [weak self] in
             do {
                 let started = Date()
@@ -251,7 +252,6 @@ final class AudioProcessController: ObservableObject {
                 if elapsed > 1 {
                     log.error("Tap activation for \(name, privacy: .public) took \(elapsed, format: .fixed(precision: 1))s — coreaudiod stalled")
                 }
-                Task { @MainActor in self?.rememberPermissionGranted() }
             } catch {
                 let message = String(describing: error)
                 log.error("Tap activation failed for \(name, privacy: .public): \(message, privacy: .public)")

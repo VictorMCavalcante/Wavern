@@ -16,6 +16,8 @@
     <string>APPL</string>
     <key>LSUIElement</key>
     <true/>
+    <key>NSAudioCaptureUsageDescription</key>
+    <string>Wavern needs system audio access to control per-app volume using Core Audio process taps.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Wavern needs audio access to control per-app volume using Core Audio process taps.</string>
     <key>NSAppleEventsUsageDescription</key>

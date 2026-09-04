@@ -38,6 +38,12 @@ final class ProcessTap: @unchecked Sendable {
     }()
 
     private(set) var isActive = false
+    /// Fires once IO actually flows. `activate()` can return success even when
+    /// TCC silently denies the tap (HAL reports `noErr` throughout, then just
+    /// never calls the IOProc) — so "the setup calls succeeded" is not proof
+    /// audio access was granted. Only a real callback is.
+    var onFirstIO: (() -> Void)?
+    private var firedFirstIO = false
 
     init(process: AudioProcess) {
         self.process = process
@@ -111,8 +117,12 @@ final class ProcessTap: @unchecked Sendable {
 
         // 3. Install the gain-applying IOProc and start it.
         let gainPtr = self.gainPtr
-        let ioBlock: AudioDeviceIOBlock = { _, inInputData, _, outOutputData, _ in
+        let ioBlock: AudioDeviceIOBlock = { [weak self] _, inInputData, _, outOutputData, _ in
             ProcessTap.render(input: inInputData, output: outOutputData, gain: gainPtr.pointee)
+            guard let self, !self.firedFirstIO else { return }
+            self.firedFirstIO = true
+            let callback = self.onFirstIO
+            DispatchQueue.main.async { callback?() }
         }
 
         var newProcID: AudioDeviceIOProcID?

@@ -193,7 +193,7 @@ struct AudioProcessRow: View {
     }
 
     private func errorHint(_ raw: String) -> String {
-        "Couldn't tap audio. Grant Wavern permission in System Settings ▸ Privacy & Security ▸ Microphone, then retry."
+        "Couldn't tap audio. Grant Wavern permission in System Settings ▸ Privacy & Security ▸ Screen & System Audio Recording, then retry."
     }
 
     @ViewBuilder private var transportControls: some View {
