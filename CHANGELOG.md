@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/VictorMCavalcante/Wavern/compare/v1.5.0...v1.5.1) (2026-09-04)
+
+
+### Bug Fixes
+
+* audio silent after rebuild due to missing system-audio permission prompt ([f0b3256](https://github.com/VictorMCavalcante/Wavern/commit/f0b325620f7d508e4749d003529c451e5e013940))
+
 ## [1.5.0](https://github.com/VictorMCavalcante/Wavern/compare/v1.4.0...v1.5.0) (2026-09-04)
 
 
