@@ -193,10 +193,13 @@ final class AudioProcessController: ObservableObject {
             settings.deviceUID = dev.uid
             outputDeviceName = dev.name
             attachOutputDevice(dev.id)
-            // Volumes belong to the old profile; reload restores the new one's.
+            // Volumes belong to the old profile. Load the new one now (not via the
+            // async reload) so the rebuild never sees an empty profile: a muted app
+            // must not lose its tap. No taps are spawned here; the rebuild makes them.
             volumes = [:]
             muted = []
             restoredIDs = []
+            for p in processes { loadPersistedState(for: p) }
             rebuildAllTaps(reason: .deviceChanged)
             reload()
         }
@@ -242,14 +245,20 @@ final class AudioProcessController: ObservableObject {
     /// get their tap created immediately ("proactive tap"), so the very next
     /// sound already comes out at the saved level.
     private func restorePersistedState(for process: AudioProcess) {
-        guard !restoredIDs.contains(process.id) else { return }
+        if loadPersistedState(for: process) { applyGain(for: process) }
+    }
+
+    /// Loads saved volume/mute without touching taps. true = non-default level.
+    @discardableResult
+    private func loadPersistedState(for process: AudioProcess) -> Bool {
+        guard !restoredIDs.contains(process.id) else { return false }
         restoredIDs.insert(process.id)
-        guard let bundleID = process.resolvedBundleID else { return }
+        guard let bundleID = process.resolvedBundleID else { return false }
         let saved = settings.volume(for: bundleID)
         let savedMuted = settings.isMuted(bundleID)
         if let saved { volumes[process.id] = saved }
         if savedMuted { muted.insert(process.id) }
-        if (saved != nil && saved != 1) || savedMuted { applyGain(for: process) }
+        return (saved != nil && saved != 1) || savedMuted
     }
 
     /// Existing tap, or a new one that starts at `initialGain` (never a jump from 100%).
@@ -348,6 +357,14 @@ final class AudioProcessController: ObservableObject {
         let dead = Array(taps.values)
         taps = [:]
         halQueue.async { dead.forEach { $0.invalidate() } }
+        // Process ids may be reassigned to other apps after the restart. Saved state
+        // is per bundle, so reload → restorePersistedState re-taps muted apps.
+        processes = []
+        volumes = [:]
+        muted = []
+        restoredIDs = []
+        tapErrors = [:]
+        lingerUntil = [:]
         outputDeviceID = .unknown   // its listeners are gone too; don't unlisten
         registerSystemListeners()
         let dev = readOutputDevice()
