@@ -1,3 +1,42 @@
+import CoreAudio
+
+/// Builds an interleaved AudioBufferList; each element is (samples, channels). Leaks on purpose (test process).
+func abl(_ bufs: [([Float], Int)]) -> UnsafeMutableAudioBufferListPointer {
+    let list = AudioBufferList.allocate(maximumBuffers: bufs.count)
+    for (i, (data, ch)) in bufs.enumerated() {
+        let p = UnsafeMutablePointer<Float>.allocate(capacity: max(data.count, 1))
+        p.initialize(from: data, count: data.count)
+        list[i] = AudioBuffer(mNumberChannels: UInt32(ch),
+                              mDataByteSize: UInt32(data.count * MemoryLayout<Float>.size), mData: p)
+    }
+    return list
+}
+func samples(_ list: UnsafeMutableAudioBufferListPointer, _ i: Int = 0) -> [Float] {
+    let b = list[i]
+    return Array(UnsafeBufferPointer(start: b.mData!.assumingMemoryBound(to: Float.self),
+                                     count: Int(b.mDataByteSize) / MemoryLayout<Float>.size))
+}
+func mix(_ input: UnsafeMutableAudioBufferListPointer, _ output: UnsafeMutableAudioBufferListPointer,
+         _ g: [Float] = [1, 1]) -> (Bool, [Float]) {
+    let gs = UnsafeMutablePointer<Float>.allocate(capacity: 2); gs.initialize(from: g, count: 2)
+    let r = AudioMix.render(input: input, output: output, gainState: gs)
+    return (r, [gs[0], gs[1]])
+}
+func mixStereoUnity() { let o = abl([([0, 0, 0, 0], 2)])
+                        assert(mix(abl([([1, -1, 0.5, -0.5], 2)]), o).0); assert(samples(o) == [1, -1, 0.5, -0.5]) }
+func mixMonoOut() { let o = abl([([0, 0], 1)]); _ = mix(abl([([1, 0, 0, 1], 2)]), o); assert(samples(o) == [0.5, 0.5]) }
+func mixMultichannelOut() { let o = abl([([Float](repeating: 7, count: 6), 6)]); _ = mix(abl([([1, 2], 2)]), o)
+                            assert(samples(o) == [1, 2, 0, 0, 0, 0]) }
+func mixPicksLastInputStream() { let o = abl([([0, 0], 2)]); _ = mix(abl([([9, 9], 2), ([1, 1], 2)]), o)
+                                 assert(samples(o) == [1, 1]) }
+func mixRamp() {
+    let o = abl([([Float](repeating: 0, count: 8), 2)])
+    let (_, g) = mix(abl([([Float](repeating: 1, count: 8), 2)]), o, [1, 0])
+    let l = stride(from: 0, to: 8, by: 2).map { samples(o)[$0] }
+    assert(zip(l, l.dropFirst()).allSatisfy { $0 < $1 }); assert(l.last! < 1 && l.last! >= 0.75); assert(g[1] == 1)
+}
+func mixSilenceReportsFalse() { assert(!mix(abl([([0, 0, 0, 0], 2)]), abl([([0, 0, 0, 0], 2)])).0) }
+
 func playing(_ act: Double = 0, cb: Double = 0, nz: Double = 0) -> TapSnapshot {
     TapSnapshot(isPlaying: true, activatedAt: act, lastCallback: cb, lastNonZero: nz)
 }
@@ -33,5 +72,11 @@ let checks: [(String, () -> Void)] = [
     ("verdictWasSilentBeforeEvent", verdictWasSilentBeforeEvent),
     ("giveUpAfterThree", giveUpAfterThree),
     ("deviceChanges", deviceChanges),
+    ("mixStereoUnity", mixStereoUnity),
+    ("mixMonoOut", mixMonoOut),
+    ("mixMultichannelOut", mixMultichannelOut),
+    ("mixPicksLastInputStream", mixPicksLastInputStream),
+    ("mixRamp", mixRamp),
+    ("mixSilenceReportsFalse", mixSilenceReportsFalse),
 ]
 for (name, f) in checks { f(); print("ok \(name)") }

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		077AB3EF024FE0F1CDD30A54 /* MarqueeText.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D95E3D243D2AC61FF4E9CE /* MarqueeText.swift */; };
 		0F6ECB7E8601A6D6E38F49EB /* TapHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E495247254F2064A168B005 /* TapHealth.swift */; };
+		1592665EE079ABC953561D38 /* AudioMix.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB36C1D9B86DAF02D58B572B /* AudioMix.swift */; };
 		22B86BF3266F03A46FA65E61 /* AudioProcessController+Ducking.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA6A02BF3C99819DBAAB04CF /* AudioProcessController+Ducking.swift */; };
 		24BFAB1EEE185B5D69169959 /* CoreAudioUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C943034C6A7A98265F3307E /* CoreAudioUtils.swift */; };
 		27085E3225792DD8E035E848 /* AudioProcess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B0EC02F9142D15E4397471 /* AudioProcess.swift */; };
@@ -71,6 +72,7 @@
 		88A81F8F92282BC24A0BE96D /* LoginItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItem.swift; sourceTree = "<group>"; };
 		8E495247254F2064A168B005 /* TapHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TapHealth.swift; sourceTree = "<group>"; };
 		A0D95E3D243D2AC61FF4E9CE /* MarqueeText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarqueeText.swift; sourceTree = "<group>"; };
+		AB36C1D9B86DAF02D58B572B /* AudioMix.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioMix.swift; sourceTree = "<group>"; };
 		B06C10CEB7D95B6074E1C2CA /* Wavern.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Wavern.entitlements; sourceTree = "<group>"; };
 		D7B128B69EA6BF86B72F347F /* UpdateChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChecker.swift; sourceTree = "<group>"; };
 		D850AFD5F1A4CA512948BA72 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -110,6 +112,7 @@
 		F2FFF64E84FB0BB7B8B1B116 /* Wavern */ = {
 			isa = PBXGroup;
 			children = (
+				AB36C1D9B86DAF02D58B572B /* AudioMix.swift */,
 				62B0EC02F9142D15E4397471 /* AudioProcess.swift */,
 				78D2D194EE570EE6016A6CBF /* AudioProcessController.swift */,
 				DA6A02BF3C99819DBAAB04CF /* AudioProcessController+Ducking.swift */,
@@ -275,6 +278,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1592665EE079ABC953561D38 /* AudioMix.swift in Sources */,
 				27085E3225792DD8E035E848 /* AudioProcess.swift in Sources */,
 				22B86BF3266F03A46FA65E61 /* AudioProcessController+Ducking.swift in Sources */,
 				27812832DCF547DFCC5AFCA0 /* AudioProcessController+MediaKeys.swift in Sources */,

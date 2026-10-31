@@ -243,7 +243,6 @@ final class AudioProcessController: ObservableObject {
         tapErrors[process.id] = nil
         let id = process.id
         let name = process.name
-        tap.onFirstIO = { [weak self] in self?.rememberPermissionGranted() }
         halQueue.async { [weak self] in
             do {
                 let started = Date()
