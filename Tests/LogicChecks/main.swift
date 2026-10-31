@@ -60,6 +60,30 @@ func deviceChanges() {
     assert(classifyDeviceChange(old: a, new: DeviceIdentity(id: 0, uid: "")) == .none)
 }
 
+func freshStore() -> (UserDefaults, SettingsStore) {
+    let d = UserDefaults(suiteName: "wavern.checks.\(UUID())")!
+    return (d, MainActor.assumeIsolated { SettingsStore(defaults: d) })
+}
+func zeroVolumeReadsAsMuted() {
+    let (d, s) = freshStore()
+    d.set(Float(0), forKey: "wavern.vol.com.x")
+    MainActor.assumeIsolated { assert(s.volume(for: "com.x") == nil); assert(s.isMuted("com.x")) }
+}
+func settingZeroMutesAndKeepsVolume() {
+    let (_, s) = freshStore()
+    MainActor.assumeIsolated {
+        s.setVolume(0.4, for: "com.x"); s.setVolume(0, for: "com.x")
+        assert(s.isMuted("com.x")); assert(s.volume(for: "com.x") == 0.4)
+    }
+}
+func positiveVolumeUnmutes() {
+    let (_, s) = freshStore()
+    MainActor.assumeIsolated {
+        s.setVolume(0.4, for: "com.x"); s.setVolume(0, for: "com.x"); s.setVolume(0.7, for: "com.x")
+        assert(!s.isMuted("com.x")); assert(s.volume(for: "com.x") == 0.7)
+    }
+}
+
 let checks: [(String, () -> Void)] = [
     ("verdictStalled", verdictStalled),
     ("verdictNotPlayingIsHealthy", verdictNotPlayingIsHealthy),
@@ -78,5 +102,8 @@ let checks: [(String, () -> Void)] = [
     ("mixPicksLastInputStream", mixPicksLastInputStream),
     ("mixRamp", mixRamp),
     ("mixSilenceReportsFalse", mixSilenceReportsFalse),
+    ("zeroVolumeReadsAsMuted", zeroVolumeReadsAsMuted),
+    ("settingZeroMutesAndKeepsVolume", settingZeroMutesAndKeepsVolume),
+    ("positiveVolumeUnmutes", positiveVolumeUnmutes),
 ]
 for (name, f) in checks { f(); print("ok \(name)") }

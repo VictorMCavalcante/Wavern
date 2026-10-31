@@ -200,8 +200,7 @@ final class AudioProcessController: ObservableObject {
     func hasTap(_ process: AudioProcess) -> Bool { taps[process.id] != nil }
 
     func setVolume(_ value: Float, for process: AudioProcess) {
-        volumes[process.id] = value
-        if value > 0 { muted.remove(process.id) }
+        if value > 0 { volumes[process.id] = value; muted.remove(process.id) } else { muted.insert(process.id) }
         if let b = process.resolvedBundleID { settings.setVolume(value, for: b) }
         applyGain(for: process)
     }

@@ -26,15 +26,21 @@ final class SettingsStore {
 
     // MARK: Per-app volume / mute
 
+    /// Never 0: a saved volume <= 0 means mute, so it reads as nil.
     func volume(for bundleID: String) -> Float? {
-        read(Key.volume(bundleID, device: deviceUID)) ?? read(Key.volume(bundleID, device: nil))
+        let v: Float? = read(Key.volume(bundleID, device: deviceUID)) ?? read(Key.volume(bundleID, device: nil))
+        return (v ?? 1) > 0 ? v : nil
     }
 
     func isMuted(_ bundleID: String) -> Bool {
-        read(Key.muted(bundleID, device: deviceUID)) ?? read(Key.muted(bundleID, device: nil)) ?? false
+        let v: Float? = read(Key.volume(bundleID, device: deviceUID)) ?? read(Key.volume(bundleID, device: nil))
+        if let v, v <= 0 { return true }
+        return read(Key.muted(bundleID, device: deviceUID)) ?? read(Key.muted(bundleID, device: nil)) ?? false
     }
 
+    /// value <= 0 mutes and keeps the previous volume for unmuting.
     func setVolume(_ value: Float, for bundleID: String) {
+        guard value > 0 else { setMuted(true, for: bundleID); return }
         write(value, Key.volume(bundleID, device: deviceUID))
         write(value, Key.volume(bundleID, device: nil))
         setMuted(false, for: bundleID)
