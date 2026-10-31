@@ -22,6 +22,9 @@ final class AudioProcessController: ObservableObject {
     /// HAL call can hang for coreaudiod's 30 s timeout, and the device-change
     /// notification must not queue behind it.
     let listenerQueue = DispatchQueue(label: "com.wavern.listeners", qos: .userInitiated)
+    /// Old taps are torn down here, off `halQueue`: destroying an aggregate on a
+    /// dead device can stall, and must not delay the replacement taps.
+    let teardownQueue = DispatchQueue(label: "com.wavern.teardown", qos: .userInitiated)
 
     init() {
         browserTabStore = BrowserTabStore(settings: settings)
@@ -156,6 +159,12 @@ final class AudioProcessController: ObservableObject {
     /// device (AirPods ↔ speakers) swaps the whole profile and rebuilds taps,
     /// which are bound to the device they were created on.
     @Published private(set) var outputDeviceName: String = ""
+    /// The device the current taps and profile belong to.
+    var currentDevice = DeviceIdentity(id: .unknown, uid: "")
+
+    // +Recovery
+    var rebuildWork: DispatchWorkItem?
+    var lastRouteEvent: TimeInterval?
 
     private func readOutputDevice() -> (id: AudioObjectID, uid: String, name: String) {
         guard let id: AudioObjectID = try? AudioObjectID.system.read(
@@ -168,31 +177,41 @@ final class AudioProcessController: ObservableObject {
 
     private func handleOutputDeviceChange() {
         let dev = readOutputDevice()
-        guard dev.uid != settings.deviceUID else { return }
-        log.info("Output device changed to \(dev.name, privacy: .public)")
-        settings.deviceUID = dev.uid
-        outputDeviceName = dev.name
-        attachOutputDevice(dev.id)
-        // Drop everything: taps point at the old device, volumes belong to the old profile.
-        for (_, tap) in taps { halQueue.async { tap.invalidate() } }
-        taps = [:]
-        volumes = [:]
-        muted = []
-        tapErrors = [:]
-        restoredIDs = []
-        reload()
+        let new = DeviceIdentity(id: dev.id, uid: dev.uid)
+        switch classifyDeviceChange(old: currentDevice, new: new) {
+        case .none:
+            return
+        case .sameProfileRebuild:
+            // Same device re-enumerated with a new id (e.g. Bluetooth reconnect): keep volumes.
+            log.notice("Output device \(dev.name, privacy: .public) has a new id \(dev.id)")
+            currentDevice = new
+            attachOutputDevice(dev.id)
+            rebuildAllTaps(reason: .sameDeviceNewID)
+        case .newProfile:
+            log.notice("Output device changed to \(dev.name, privacy: .public)")
+            currentDevice = new
+            settings.deviceUID = dev.uid
+            outputDeviceName = dev.name
+            attachOutputDevice(dev.id)
+            // Volumes belong to the old profile; reload restores the new one's.
+            volumes = [:]
+            muted = []
+            restoredIDs = []
+            rebuildAllTaps(reason: .deviceChanged)
+            reload()
+        }
     }
 
     // MARK: Volume state
 
     static let maxGain: Float = 2.0
 
-    private var taps: [AudioObjectID: ProcessTap] = [:]
+    var taps: [AudioObjectID: ProcessTap] = [:]
     /// Processes whose saved state has been loaded (reset on device change).
     private var restoredIDs: Set<AudioObjectID> = []
     @Published private(set) var volumes: [AudioObjectID: Float] = [:]
     @Published private(set) var muted: Set<AudioObjectID> = []
-    @Published private(set) var tapErrors: [AudioObjectID: String] = [:]
+    @Published var tapErrors: [AudioObjectID: String] = [:]
     @Published private(set) var audioPermissionGranted: Bool
 
     func volume(for process: AudioProcess) -> Float { volumes[process.id] ?? 1.0 }
@@ -215,10 +234,8 @@ final class AudioProcessController: ObservableObject {
     /// Push the effective gain (volume × mute × ducking) to the process's tap,
     /// creating the tap if needed.
     func applyGain(for process: AudioProcess) {
-        var effective: Float = muted.contains(process.id) ? 0 : (volumes[process.id] ?? 1.0)
-        if isDucked(process) { effective *= duckLevel }
-        guard let tap = ensureTap(for: process) else { return }
-        tap.gain = effective
+        let effective = effectiveGain(for: process)
+        ensureTap(for: process, initialGain: effective).gain = effective
     }
 
     /// Load saved volume/mute once per process. Apps with a non-default level
@@ -235,9 +252,12 @@ final class AudioProcessController: ObservableObject {
         if (saved != nil && saved != 1) || savedMuted { applyGain(for: process) }
     }
 
-    private func ensureTap(for process: AudioProcess) -> ProcessTap? {
+    /// Existing tap, or a new one that starts at `initialGain` (never a jump from 100%).
+    @discardableResult
+    func ensureTap(for process: AudioProcess, initialGain: Float) -> ProcessTap {
         if let existing = taps[process.id] { return existing }
         let tap = ProcessTap(process: process)
+        tap.gain = initialGain
         taps[process.id] = tap
         tapErrors[process.id] = nil
         let id = process.id
@@ -294,16 +314,47 @@ final class AudioProcessController: ObservableObject {
         log.info("Wavern starting")
         halQueue.async { ProcessTap.reapLeakedDevices() }
         let dev = readOutputDevice()
-        settings.deviceUID = dev.uid
+        currentDevice = DeviceIdentity(id: dev.id, uid: dev.uid)
+        if !dev.uid.isEmpty { settings.deviceUID = dev.uid }
         outputDeviceName = dev.name
         attachOutputDevice(dev.id)
+        registerSystemListeners()
+        _ = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.rebuildAllTaps(reason: .wake) }
+        }
+        startMediaKeysIfEnabled()
+        reload()
+    }
+
+    private func registerSystemListeners() {
         listen(kAudioHardwarePropertyProcessObjectList, on: .system) { [weak self] in self?.reload() }
         listen(kAudioHardwarePropertyDefaultOutputDevice, on: .system) { [weak self] in
             self?.handleOutputDeviceChange()
         }
         listen(kAudioHardwarePropertyDevices, on: .system) { [weak self] in self?.refreshOutputDevices() }
-        startMediaKeysIfEnabled()
+        listen(kAudioHardwarePropertyServiceRestarted, on: .system) { [weak self] in
+            self?.handleServiceRestarted()
+        }
+    }
+
+    /// coreaudiod restarted: every object id we hold (listeners, taps,
+    /// aggregates) died with it, so drop them without HAL calls and start over.
+    private func handleServiceRestarted() {
+        log.notice("coreaudiod restarted")
+        listeners = [:]
+        // Their ids are stale; invalidating just clears our handles. On halQueue so it
+        // finishes before any new tap activates (a reused id must not be destroyed).
+        let dead = Array(taps.values)
+        taps = [:]
+        halQueue.async { dead.forEach { $0.invalidate() } }
+        outputDeviceID = .unknown   // its listeners are gone too; don't unlisten
+        registerSystemListeners()
+        let dev = readOutputDevice()
+        currentDevice = DeviceIdentity(id: dev.id, uid: dev.uid)
+        attachOutputDevice(dev.id)
         reload()
+        rebuildAllTaps(reason: .serviceRestarted)
     }
 
     func willTerminate() {
@@ -344,8 +395,11 @@ final class AudioProcessController: ObservableObject {
         }
     }
 
-    private func apply(_ result: [AudioProcess]) {
+    /// nil = the HAL read failed: keep the current state rather than wiping it.
+    private func apply(_ result: [AudioProcess]?) {
         reloadInFlight = false
+        defer { if reloadPending { reloadPending = false; reload() } }
+        guard let result else { return }
         let previouslyPlaying = Set(processes.filter(\.isPlaying).map(\.id))
         processes = result
         let living = Set(result.map(\.id))
@@ -362,17 +416,16 @@ final class AudioProcessController: ObservableObject {
         updateDucking()
         refreshNowPlaying(living: living)
         browserTabStore.refresh()
-        if reloadPending { reloadPending = false; reload() }
     }
 
-    nonisolated private static func enumerateProcesses() -> [AudioProcess] {
+    nonisolated private static func enumerateProcesses() -> [AudioProcess]? {
         do {
             let objectIDs: [AudioObjectID] = try AudioObjectID.system.readArray(
                 kAudioHardwarePropertyProcessObjectList)
             return objectIDs.compactMap { $0.isValid ? makeProcess($0) : nil }
         } catch {
             log.error("Failed to read process list: \(String(describing: error))")
-            return []
+            return nil
         }
     }
 

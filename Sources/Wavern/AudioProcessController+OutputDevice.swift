@@ -38,6 +38,17 @@ extension AudioProcessController {
             listen(Self.mainVolume, on: id, scope: kAudioObjectPropertyScopeOutput) { [weak self] in
                 self?.refreshMasterVolume()
             }
+            // Taps are built for one format; any change means rebuild.
+            listen(kAudioDevicePropertyNominalSampleRate, on: id) { [weak self] in
+                self?.rebuildAllTaps(reason: .formatChanged)
+            }
+            listen(kAudioDevicePropertyStreamConfiguration, on: id, scope: kAudioObjectPropertyScopeOutput) { [weak self] in
+                self?.rebuildAllTaps(reason: .formatChanged)
+            }
+            listen(kAudioDevicePropertyDeviceIsAlive, on: id) { [weak self] in
+                let alive: UInt32 = (try? id.read(kAudioDevicePropertyDeviceIsAlive, default: UInt32(1))) ?? 0
+                if alive == 0 { self?.rebuildAllTaps(reason: .deviceDied) }
+            }
         }
         refreshMasterVolume()
         refreshOutputDevices()
