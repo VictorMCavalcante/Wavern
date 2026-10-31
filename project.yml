@@ -17,6 +17,8 @@ targets:
     platform: macOS
     sources:
       - path: Sources/Wavern
+      - path: Resources/AppIcon.icns
+        buildPhase: resources
       - path: Sources/BrowserExtension
         buildPhase: resources
         type: folder
