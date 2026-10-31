@@ -1,3 +1,4 @@
+import CoreAudio
 import Foundation
 
 /// Automatic ducking: while a "ducker" app (calls, voice chat) outputs audio,
@@ -40,7 +41,41 @@ extension AudioProcessController {
         reapplyAllGains()
     }
 
+    /// The HAL doesn't reliably notify IsRunningInput, so while ducking is on and a
+    /// ducker is present, poll just those processes once a second. No timer otherwise.
+    private func syncDuckInputTimer() {
+        let needed = duckLevel < 1 && processes.contains { isDucker($0) }
+        if !needed { duckInputTimer?.invalidate(); duckInputTimer = nil; return }
+        guard duckInputTimer == nil else { return }
+        duckInputTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.pollDuckerInput() }
+        }
+    }
+
+    private func pollDuckerInput() {
+        let ids = processes.filter { isDucker($0) }.map(\.id)
+        halQueue.async { [weak self] in
+            let values = ids.map { id -> (AudioObjectID, Bool) in
+                let v: UInt32 = (try? id.read(kAudioProcessPropertyIsRunningInput, default: UInt32(0))) ?? 0
+                return (id, v != 0)
+            }
+            Task { @MainActor in
+                guard let self else { return }
+                var changed = false
+                for (id, on) in values {
+                    if let i = self.processes.firstIndex(where: { $0.id == id }),
+                       self.processes[i].isUsingInput != on {
+                        self.processes[i].isUsingInput = on
+                        changed = true
+                    }
+                }
+                if changed { self.updateDucking() }
+            }
+        }
+    }
+
     func updateDucking() {
+        syncDuckInputTimer()
         let active = processes.contains { $0.isUsingInput && isDucker($0) }
         if active && duckLevel < 1 {
             duckReleaseWork?.cancel()

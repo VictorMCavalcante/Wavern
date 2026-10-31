@@ -39,6 +39,7 @@ final class AudioProcessController: ObservableObject {
     @Published var duckLevel: Float { didSet { duckLevelDidChange() } }
     @Published private(set) var isDucking = false
     var duckReleaseWork: DispatchWorkItem?
+    var duckInputTimer: Timer?
     var duckerCache: [String: Bool] = [:]
 
     // +MediaKeys
@@ -72,7 +73,7 @@ final class AudioProcessController: ObservableObject {
 
     // MARK: Processes
 
-    @Published private(set) var processes: [AudioProcess] = []
+    @Published var processes: [AudioProcess] = []
 
     /// Processes currently outputting audio, plus any that did so within the
     /// last `lingerInterval` — so short sounds (notifications) stay adjustable.
