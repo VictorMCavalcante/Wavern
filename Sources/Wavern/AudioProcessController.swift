@@ -165,6 +165,14 @@ final class AudioProcessController: ObservableObject {
     // +Recovery
     var rebuildWork: DispatchWorkItem?
     var lastRouteEvent: TimeInterval?
+    var watchdogTimer: Timer?
+    var giveUp = GiveUpPolicy()
+    /// Last sound heard per process before a rebuild replaced its tap (whose own stamp restarts at 0).
+    var carriedNonZero: [AudioObjectID: TimeInterval] = [:]
+    /// Given up with a reduced volume: left at native level until the user touches it.
+    @Published private(set) var uncontrolled: Set<AudioObjectID> = []
+    func setUncontrolled(_ v: Set<AudioObjectID>) { uncontrolled = v }
+    func isUncontrolled(_ p: AudioProcess) -> Bool { uncontrolled.contains(p.id) }
 
     private func readOutputDevice() -> (id: AudioObjectID, uid: String, name: String) {
         guard let id: AudioObjectID = try? AudioObjectID.system.read(
@@ -209,7 +217,9 @@ final class AudioProcessController: ObservableObject {
 
     static let maxGain: Float = 2.0
 
-    var taps: [AudioObjectID: ProcessTap] = [:]
+    var taps: [AudioObjectID: ProcessTap] = [:] {
+        didSet { if taps.isEmpty { watchdogTimer?.invalidate(); watchdogTimer = nil } }
+    }
     /// Processes whose saved state has been loaded (reset on device change).
     private var restoredIDs: Set<AudioObjectID> = []
     @Published private(set) var volumes: [AudioObjectID: Float] = [:]
@@ -222,6 +232,7 @@ final class AudioProcessController: ObservableObject {
     func hasTap(_ process: AudioProcess) -> Bool { taps[process.id] != nil }
 
     func setVolume(_ value: Float, for process: AudioProcess) {
+        retryControl(process, unmuting: value > 0)
         if value > 0 { volumes[process.id] = value; muted.remove(process.id) } else { muted.insert(process.id) }
         if let b = process.resolvedBundleID { settings.setVolume(value, for: b) }
         applyGain(for: process)
@@ -229,6 +240,7 @@ final class AudioProcessController: ObservableObject {
 
     func toggleMute(_ process: AudioProcess) {
         let nowMuted = !muted.contains(process.id)
+        retryControl(process, unmuting: !nowMuted)
         if nowMuted { muted.insert(process.id) } else { muted.remove(process.id) }
         if let b = process.resolvedBundleID { settings.setMuted(nowMuted, for: b) }
         applyGain(for: process)
@@ -237,6 +249,7 @@ final class AudioProcessController: ObservableObject {
     /// Push the effective gain (volume × mute × ducking) to the process's tap,
     /// creating the tap if needed.
     func applyGain(for process: AudioProcess) {
+        guard !uncontrolled.contains(process.id) else { return }   // given up: native until touched
         let effective = effectiveGain(for: process)
         ensureTap(for: process, initialGain: effective).gain = effective
     }
@@ -263,11 +276,13 @@ final class AudioProcessController: ObservableObject {
 
     /// Existing tap, or a new one that starts at `initialGain` (never a jump from 100%).
     @discardableResult
-    func ensureTap(for process: AudioProcess, initialGain: Float) -> ProcessTap {
+    func ensureTap(for process: AudioProcess, initialGain: Float,
+                   mode: ProcessTap.Mode = .control) -> ProcessTap {
         if let existing = taps[process.id] { return existing }
-        let tap = ProcessTap(process: process)
+        let tap = ProcessTap(process: process, mode: mode)
         tap.gain = initialGain
         taps[process.id] = tap
+        startWatchdogIfNeeded()
         tapErrors[process.id] = nil
         let id = process.id
         let name = process.name
@@ -292,7 +307,7 @@ final class AudioProcessController: ObservableObject {
         return tap
     }
 
-    private func rememberPermissionGranted() {
+    func rememberPermissionGranted() {
         guard !audioPermissionGranted else { return }
         audioPermissionGranted = true
         settings.hasGrantedAudioTap = true
@@ -305,6 +320,7 @@ final class AudioProcessController: ObservableObject {
         }
         volumes = volumes.filter { livingIDs.contains($0.key) }
         muted = muted.filter { livingIDs.contains($0) }
+        uncontrolled = uncontrolled.filter { livingIDs.contains($0) }
         tapErrors = tapErrors.filter { livingIDs.contains($0.key) }
         restoredIDs = restoredIDs.filter { livingIDs.contains($0) }
         lingerUntil = lingerUntil.filter { livingIDs.contains($0.key) }

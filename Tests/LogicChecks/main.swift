@@ -52,6 +52,8 @@ func verdictEventTooOld()       { assert(TapHealth.verdict(playing(cb: 119.9, nz
 func verdictWasSilentBeforeEvent() { assert(TapHealth.verdict(playing(cb: 99.9, nz: 70), now: 93, lastEvent: 90) == .healthy) }
 func giveUpAfterThree() { var p = GiveUpPolicy(); assert(!p.strike(7)); assert(!p.strike(7)); assert(p.strike(7))
                           p.reset(); assert(!p.strike(7)) }
+func giveUpClearOne() { var p = GiveUpPolicy(); _ = p.strike(7); _ = p.strike(7); _ = p.strike(8); _ = p.strike(8)
+                        p.clear(7); assert(!p.strike(7)); assert(p.strike(8)) }
 func deviceChanges() {
     let a = DeviceIdentity(id: 1, uid: "X")
     assert(classifyDeviceChange(old: a, new: DeviceIdentity(id: 1, uid: "X")) == .none)
@@ -105,6 +107,7 @@ let checks: [(String, () -> Void)] = [
     ("verdictEventTooOld", verdictEventTooOld),
     ("verdictWasSilentBeforeEvent", verdictWasSilentBeforeEvent),
     ("giveUpAfterThree", giveUpAfterThree),
+    ("giveUpClearOne", giveUpClearOne),
     ("deviceChanges", deviceChanges),
     ("mixStereoUnity", mixStereoUnity),
     ("mixMonoOut", mixMonoOut),

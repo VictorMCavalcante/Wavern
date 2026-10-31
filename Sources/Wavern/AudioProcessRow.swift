@@ -119,6 +119,15 @@ struct AudioProcessRow: View {
                 .foregroundStyle(Color.accentColor)
             }
 
+            if controller.isUncontrolled(process) {
+                Button { controller.setVolume(controller.volume(for: process), for: process) } label: {
+                    Label("No control — tap to retry", systemImage: "exclamationmark.triangle")
+                        .font(.caption2)
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)   // Task 9 restyles to Theme.quiet
+            }
+
             if let error = controller.tapErrors[process.id] {
                 Text(errorHint(error))
                     .font(.caption2)

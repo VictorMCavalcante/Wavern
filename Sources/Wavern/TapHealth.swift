@@ -36,6 +36,7 @@ struct GiveUpPolicy {
         return strikes[id]! >= Self.maxStrikes
     }
     mutating func reset() { strikes = [:] }
+    mutating func clear(_ id: UInt32) { strikes[id] = nil }
 }
 
 struct DeviceIdentity: Equatable { let id: UInt32; let uid: String }
