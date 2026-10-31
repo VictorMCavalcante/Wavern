@@ -41,7 +41,7 @@ extension AudioProcessController {
     }
 
     func updateDucking() {
-        let active = processes.contains { $0.isPlaying && isDucker($0) }
+        let active = processes.contains { $0.isUsingInput && isDucker($0) }
         if active && duckLevel < 1 {
             duckReleaseWork?.cancel()
             duckReleaseWork = nil

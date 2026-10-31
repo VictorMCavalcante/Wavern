@@ -440,6 +440,7 @@ final class AudioProcessController: ObservableObject {
             // HAL only notifies IsRunning reliably; IsRunningOutput is read on reload.
             listenProcess(kAudioProcessPropertyIsRunning, on: process.id)
             listenProcess(kAudioProcessPropertyIsRunningOutput, on: process.id)
+            listenProcess(kAudioProcessPropertyIsRunningInput, on: process.id)
             if process.isPlaying && !previouslyPlaying.contains(process.id) {
                 noteActivity(process.id)
             }
@@ -470,8 +471,10 @@ final class AudioProcessController: ObservableObject {
         let bundleID: String? = try? objectID.readCF(kAudioProcessPropertyBundleID, as: String.self) ?? nil
         let isRunningOutput: UInt32 = (try? objectID.read(
             kAudioProcessPropertyIsRunningOutput, default: UInt32(0))) ?? 0
+        let isRunningInput: UInt32 = (try? objectID.read(
+            kAudioProcessPropertyIsRunningInput, default: UInt32(0))) ?? 0
         return AudioProcess(objectID: objectID, pid: pid, bundleID: bundleID,
-                            isPlaying: isRunningOutput != 0)
+                            isPlaying: isRunningOutput != 0, isUsingInput: isRunningInput != 0)
     }
 }
 

@@ -11,6 +11,8 @@ struct AudioProcess: Identifiable, Hashable {
     let pid: pid_t
     let bundleID: String?
     var isPlaying: Bool
+    /// IsRunningInput: the process is capturing the microphone (a call, not just an open output engine).
+    var isUsingInput: Bool
 
     /// The app this process belongs to (helper processes resolve to their parent app).
     let runningApp: NSRunningApplication?
@@ -20,11 +22,12 @@ struct AudioProcess: Identifiable, Hashable {
     var id: AudioObjectID { objectID }
     var icon: NSImage? { runningApp?.icon }
 
-    init(objectID: AudioObjectID, pid: pid_t, bundleID: String?, isPlaying: Bool) {
+    init(objectID: AudioObjectID, pid: pid_t, bundleID: String?, isPlaying: Bool, isUsingInput: Bool = false) {
         self.objectID = objectID
         self.pid = pid
         self.bundleID = bundleID
         self.isPlaying = isPlaying
+        self.isUsingInput = isUsingInput
         let app = Self.resolveApp(pid: pid)
         runningApp = app
         resolvedBundleID = app?.bundleIdentifier ?? bundleID
@@ -54,7 +57,7 @@ struct AudioProcess: Identifiable, Hashable {
 
     static func == (lhs: AudioProcess, rhs: AudioProcess) -> Bool {
         lhs.objectID == rhs.objectID && lhs.pid == rhs.pid
-            && lhs.isPlaying == rhs.isPlaying && lhs.name == rhs.name
+            && lhs.isPlaying == rhs.isPlaying && lhs.isUsingInput == rhs.isUsingInput && lhs.name == rhs.name
     }
 
     func hash(into hasher: inout Hasher) {
