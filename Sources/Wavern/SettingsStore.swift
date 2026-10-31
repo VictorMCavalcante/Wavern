@@ -47,6 +47,13 @@ final class SettingsStore {
     }
 
     func setMuted(_ muted: Bool, for bundleID: String) {
+        if !muted {
+            // A stored volume <= 0 would re-mute on relaunch; drop it.
+            for dev in [deviceUID, nil] as [String?] {
+                let k = Key.volume(bundleID, device: dev)
+                if let v: Float = read(k), v <= 0 { pending[k] = nil; defaults.removeObject(forKey: k) }
+            }
+        }
         write(muted, Key.muted(bundleID, device: deviceUID))
         write(muted, Key.muted(bundleID, device: nil))
     }

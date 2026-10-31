@@ -84,6 +84,16 @@ func positiveVolumeUnmutes() {
     }
 }
 
+func unmuteClearsLegacyZero() {
+    let (d, s) = freshStore()
+    d.set(Float(0), forKey: "wavern.vol.com.y")
+    MainActor.assumeIsolated {
+        assert(s.isMuted("com.y")); s.setMuted(false, for: "com.y"); s.flush()
+        assert(!s.isMuted("com.y")); assert(s.volume(for: "com.y") == nil)
+        assert(!SettingsStore(defaults: d).isMuted("com.y"))
+    }
+}
+
 let checks: [(String, () -> Void)] = [
     ("verdictStalled", verdictStalled),
     ("verdictNotPlayingIsHealthy", verdictNotPlayingIsHealthy),
@@ -105,5 +115,6 @@ let checks: [(String, () -> Void)] = [
     ("zeroVolumeReadsAsMuted", zeroVolumeReadsAsMuted),
     ("settingZeroMutesAndKeepsVolume", settingZeroMutesAndKeepsVolume),
     ("positiveVolumeUnmutes", positiveVolumeUnmutes),
+    ("unmuteClearsLegacyZero", unmuteClearsLegacyZero),
 ]
 for (name, f) in checks { f(); print("ok \(name)") }
