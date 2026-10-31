@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		077AB3EF024FE0F1CDD30A54 /* MarqueeText.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D95E3D243D2AC61FF4E9CE /* MarqueeText.swift */; };
+		0F6ECB7E8601A6D6E38F49EB /* TapHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E495247254F2064A168B005 /* TapHealth.swift */; };
 		22B86BF3266F03A46FA65E61 /* AudioProcessController+Ducking.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA6A02BF3C99819DBAAB04CF /* AudioProcessController+Ducking.swift */; };
 		24BFAB1EEE185B5D69169959 /* CoreAudioUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C943034C6A7A98265F3307E /* CoreAudioUtils.swift */; };
 		27085E3225792DD8E035E848 /* AudioProcess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B0EC02F9142D15E4397471 /* AudioProcess.swift */; };
@@ -68,6 +69,7 @@
 		7C943034C6A7A98265F3307E /* CoreAudioUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreAudioUtils.swift; sourceTree = "<group>"; };
 		83D480BB4DE6C2455A321504 /* BrowserBridgeInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserBridgeInstaller.swift; sourceTree = "<group>"; };
 		88A81F8F92282BC24A0BE96D /* LoginItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItem.swift; sourceTree = "<group>"; };
+		8E495247254F2064A168B005 /* TapHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TapHealth.swift; sourceTree = "<group>"; };
 		A0D95E3D243D2AC61FF4E9CE /* MarqueeText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarqueeText.swift; sourceTree = "<group>"; };
 		B06C10CEB7D95B6074E1C2CA /* Wavern.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Wavern.entitlements; sourceTree = "<group>"; };
 		D7B128B69EA6BF86B72F347F /* UpdateChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChecker.swift; sourceTree = "<group>"; };
@@ -128,6 +130,7 @@
 				F19BBC9BA05940DEEA93AC98 /* NowPlayingService.swift */,
 				287FD31EB0EC9B6C4AA60ADF /* ProcessTap.swift */,
 				31551F9BBED6864E3C8A6CDD /* SettingsStore.swift */,
+				8E495247254F2064A168B005 /* TapHealth.swift */,
 				D7B128B69EA6BF86B72F347F /* UpdateChecker.swift */,
 				49E930E7DF36532A4F421406 /* VisualEffectBackground.swift */,
 				F0C195064E8937B6D2FD741B /* VolumeSlider.swift */,
@@ -291,6 +294,7 @@
 				755F42BEBFBEBBB38D1B82F0 /* NowPlayingService.swift in Sources */,
 				E00831A8E4A832E238B863CC /* ProcessTap.swift in Sources */,
 				7743AB705E027A227A8C9FD2 /* SettingsStore.swift in Sources */,
+				0F6ECB7E8601A6D6E38F49EB /* TapHealth.swift in Sources */,
 				CE36340F044DC96D4A129A1A /* UpdateChecker.swift in Sources */,
 				C7FA37490956726960AB2151 /* VisualEffectBackground.swift in Sources */,
 				C46B45988D56B5B05797BB7C /* VolumeSlider.swift in Sources */,
@@ -383,7 +387,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
-				MARKETING_VERSION = 1.4.0;
+				MARKETING_VERSION = 1.5.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -465,7 +469,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
-				MARKETING_VERSION = 1.4.0;
+				MARKETING_VERSION = 1.5.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
