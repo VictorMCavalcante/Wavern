@@ -32,10 +32,8 @@ struct MenuView: View {
             Divider().opacity(0.5)
             footer
         }
-        .frame(width: 350)
-        .background(VisualEffectBackground(material: .hudWindow, blendingMode: .behindWindow))
-        .onAppear { controller.beginLiveUpdates() }
-        .onDisappear { controller.endLiveUpdates() }
+        .frame(width: Theme.panelWidth)
+        .background(BrandSurface())
     }
 
     private var masterVolume: Binding<Double> {

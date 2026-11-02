@@ -4,44 +4,25 @@ import SwiftUI
 @main
 struct WavernApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var controller = AudioProcessController.shared
-    @StateObject private var updateChecker = UpdateChecker.shared
 
+    // LSUIElement app: the UI lives in StatusPanel, this scene is never shown.
     var body: some Scene {
-        MenuBarExtra {
-            MenuView()
-                .environmentObject(controller)
-                .environmentObject(controller.browserTabStore)
-                .environmentObject(updateChecker)
-        } label: {
-            if !controller.isAnyPlaying {
-                Image(systemName: "speaker.wave.2.fill")
-            } else {
-                Image(systemName: "waveform")
-                    .symbolEffect(.variableColor.iterative.reversing, isActive: true)
-            }
-        }
-        .menuBarExtraStyle(.window)
+        Settings { EmptyView() }
     }
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var statusPanel: StatusPanel?
+
     func applicationWillTerminate(_ notification: Notification) {
         AudioProcessController.shared.willTerminate()
     }
 
+    @MainActor
     func applicationDidFinishLaunching(_ notification: Notification) {
         AudioProcessController.shared.start()
         BrowserBridgeInstaller.install()
         UpdateChecker.shared.check()
-        // Make the MenuBarExtra panel transparent so VisualEffectBackground shows through
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            for window in NSApp.windows {
-                if window is NSPanel {
-                    window.backgroundColor = .clear
-                    window.isOpaque = false
-                }
-            }
-        }
+        statusPanel = StatusPanel(controller: .shared, updateChecker: .shared)
     }
 }

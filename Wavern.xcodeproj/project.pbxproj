@@ -14,11 +14,13 @@
 		24BFAB1EEE185B5D69169959 /* CoreAudioUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C943034C6A7A98265F3307E /* CoreAudioUtils.swift */; };
 		27085E3225792DD8E035E848 /* AudioProcess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B0EC02F9142D15E4397471 /* AudioProcess.swift */; };
 		27812832DCF547DFCC5AFCA0 /* AudioProcessController+MediaKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5171837F44104565CE42D905 /* AudioProcessController+MediaKeys.swift */; };
+		365AC61E7E41DEF7F20431AE /* StatusPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CD9C9F8686C4046FBB855F4 /* StatusPanel.swift */; };
 		3D34D59AF9DC9A6612A8F56E /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = C59E0E48D71EAE05522E6949 /* AppIcon.icns */; };
 		4139E9CC24E51255F387574B /* ExtensionOnboardingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DA51BFE8966A9635453243 /* ExtensionOnboardingSheet.swift */; };
 		467584012C28E5C5E9FEB491 /* BrowserBridgeInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83D480BB4DE6C2455A321504 /* BrowserBridgeInstaller.swift */; };
 		5032DCBE54A0EBC80B960597 /* AudioProcessController+OutputDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A64529A679DC4E4029F2051 /* AudioProcessController+OutputDevice.swift */; };
 		52EBBE8344B009C20ADE0C1F /* AudioProcessController+NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FD6FBA6DADF8CFF731CED7F /* AudioProcessController+NowPlaying.swift */; };
+		54C9611019C11F2693E440DA /* BrandSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502CD442024236AB88181C86 /* BrandSurface.swift */; };
 		59E45D2BB7802F9A293D0E97 /* BrowserExtension in Resources */ = {isa = PBXBuildFile; fileRef = 6E297538ACD3009A6EB79AC3 /* BrowserExtension */; };
 		5D5B3C6CA15B9CCCCB1AE34A /* WavernApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FEA11F006061032C5B771C3 /* WavernApp.swift */; };
 		69A1EA2C9D87CDA3D5757D66 /* AudioProcessRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C2D6B8C1050B89213804363 /* AudioProcessRow.swift */; };
@@ -32,11 +34,11 @@
 		B968F85A62987BF4F6E4809A /* AudioProcessController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78D2D194EE570EE6016A6CBF /* AudioProcessController.swift */; };
 		BA0612CF8309913EE4976C12 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F6EEEA8AFBDBF7DEB72041E /* WaveformView.swift */; };
 		C46B45988D56B5B05797BB7C /* VolumeSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0C195064E8937B6D2FD741B /* VolumeSlider.swift */; };
-		C7FA37490956726960AB2151 /* VisualEffectBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49E930E7DF36532A4F421406 /* VisualEffectBackground.swift */; };
 		CA1EAA51FEF6AAE04BDDB3A9 /* NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6CC1D2A940FFE711E13D79 /* NowPlaying.swift */; };
 		CE36340F044DC96D4A129A1A /* UpdateChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7B128B69EA6BF86B72F347F /* UpdateChecker.swift */; };
 		D4A57468A209A95A4C9CECDF /* LoginItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88A81F8F92282BC24A0BE96D /* LoginItem.swift */; };
 		E00831A8E4A832E238B863CC /* ProcessTap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 287FD31EB0EC9B6C4AA60ADF /* ProcessTap.swift */; };
+		EDC509F2371A04861EB88464 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED6CD664ECBE797F783139A /* Theme.swift */; };
 		F9943FF85C10DB7DD492CF4C /* MediaKeyTap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F23835A42207630BFBF5B9F /* MediaKeyTap.swift */; };
 /* End PBXBuildFile section */
 
@@ -53,13 +55,14 @@
 /* Begin PBXFileReference section */
 		25627438337AAA1CAFA22666 /* Wavern.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Wavern.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		287FD31EB0EC9B6C4AA60ADF /* ProcessTap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessTap.swift; sourceTree = "<group>"; };
+		2ED6CD664ECBE797F783139A /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		2F6EEEA8AFBDBF7DEB72041E /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
 		2FD6FBA6DADF8CFF731CED7F /* AudioProcessController+NowPlaying.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AudioProcessController+NowPlaying.swift"; sourceTree = "<group>"; };
 		2FEA11F006061032C5B771C3 /* WavernApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WavernApp.swift; sourceTree = "<group>"; };
 		31551F9BBED6864E3C8A6CDD /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		38DA51BFE8966A9635453243 /* ExtensionOnboardingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionOnboardingSheet.swift; sourceTree = "<group>"; };
 		3C2D6B8C1050B89213804363 /* AudioProcessRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioProcessRow.swift; sourceTree = "<group>"; };
-		49E930E7DF36532A4F421406 /* VisualEffectBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectBackground.swift; sourceTree = "<group>"; };
+		502CD442024236AB88181C86 /* BrandSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandSurface.swift; sourceTree = "<group>"; };
 		50DB04547613AC0960597D85 /* MenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuView.swift; sourceTree = "<group>"; };
 		5171837F44104565CE42D905 /* AudioProcessController+MediaKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AudioProcessController+MediaKeys.swift"; sourceTree = "<group>"; };
 		5F23835A42207630BFBF5B9F /* MediaKeyTap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaKeyTap.swift; sourceTree = "<group>"; };
@@ -74,6 +77,7 @@
 		83D480BB4DE6C2455A321504 /* BrowserBridgeInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserBridgeInstaller.swift; sourceTree = "<group>"; };
 		88A81F8F92282BC24A0BE96D /* LoginItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItem.swift; sourceTree = "<group>"; };
 		8E495247254F2064A168B005 /* TapHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TapHealth.swift; sourceTree = "<group>"; };
+		9CD9C9F8686C4046FBB855F4 /* StatusPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPanel.swift; sourceTree = "<group>"; };
 		A0D95E3D243D2AC61FF4E9CE /* MarqueeText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarqueeText.swift; sourceTree = "<group>"; };
 		A113559D5561676B03480C81 /* BrandGlyph.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandGlyph.swift; sourceTree = "<group>"; };
 		AB36C1D9B86DAF02D58B572B /* AudioMix.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioMix.swift; sourceTree = "<group>"; };
@@ -137,6 +141,7 @@
 				EA757B66AD95C9CEEFB17653 /* AudioProcessController+Recovery.swift */,
 				3C2D6B8C1050B89213804363 /* AudioProcessRow.swift */,
 				A113559D5561676B03480C81 /* BrandGlyph.swift */,
+				502CD442024236AB88181C86 /* BrandSurface.swift */,
 				83D480BB4DE6C2455A321504 /* BrowserBridgeInstaller.swift */,
 				6F0981085AEEB976F70F6382 /* BrowserTabStore.swift */,
 				7C943034C6A7A98265F3307E /* CoreAudioUtils.swift */,
@@ -150,9 +155,10 @@
 				F19BBC9BA05940DEEA93AC98 /* NowPlayingService.swift */,
 				287FD31EB0EC9B6C4AA60ADF /* ProcessTap.swift */,
 				31551F9BBED6864E3C8A6CDD /* SettingsStore.swift */,
+				9CD9C9F8686C4046FBB855F4 /* StatusPanel.swift */,
 				8E495247254F2064A168B005 /* TapHealth.swift */,
+				2ED6CD664ECBE797F783139A /* Theme.swift */,
 				D7B128B69EA6BF86B72F347F /* UpdateChecker.swift */,
-				49E930E7DF36532A4F421406 /* VisualEffectBackground.swift */,
 				F0C195064E8937B6D2FD741B /* VolumeSlider.swift */,
 				2F6EEEA8AFBDBF7DEB72041E /* WaveformView.swift */,
 				B06C10CEB7D95B6074E1C2CA /* Wavern.entitlements */,
@@ -306,6 +312,7 @@
 				B968F85A62987BF4F6E4809A /* AudioProcessController.swift in Sources */,
 				69A1EA2C9D87CDA3D5757D66 /* AudioProcessRow.swift in Sources */,
 				A68A8A523E6A399C0974BC6A /* BrandGlyph.swift in Sources */,
+				54C9611019C11F2693E440DA /* BrandSurface.swift in Sources */,
 				467584012C28E5C5E9FEB491 /* BrowserBridgeInstaller.swift in Sources */,
 				800CA13254057718521EC431 /* BrowserTabStore.swift in Sources */,
 				24BFAB1EEE185B5D69169959 /* CoreAudioUtils.swift in Sources */,
@@ -318,9 +325,10 @@
 				755F42BEBFBEBBB38D1B82F0 /* NowPlayingService.swift in Sources */,
 				E00831A8E4A832E238B863CC /* ProcessTap.swift in Sources */,
 				7743AB705E027A227A8C9FD2 /* SettingsStore.swift in Sources */,
+				365AC61E7E41DEF7F20431AE /* StatusPanel.swift in Sources */,
 				0F6ECB7E8601A6D6E38F49EB /* TapHealth.swift in Sources */,
+				EDC509F2371A04861EB88464 /* Theme.swift in Sources */,
 				CE36340F044DC96D4A129A1A /* UpdateChecker.swift in Sources */,
-				C7FA37490956726960AB2151 /* VisualEffectBackground.swift in Sources */,
 				C46B45988D56B5B05797BB7C /* VolumeSlider.swift in Sources */,
 				BA0612CF8309913EE4976C12 /* WaveformView.swift in Sources */,
 				5D5B3C6CA15B9CCCCB1AE34A /* WavernApp.swift in Sources */,
