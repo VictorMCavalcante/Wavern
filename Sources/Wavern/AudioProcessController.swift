@@ -327,6 +327,7 @@ final class AudioProcessController: ObservableObject {
         tapErrors = tapErrors.filter { livingIDs.contains($0.key) }
         restoredIDs = restoredIDs.filter { livingIDs.contains($0) }
         lingerUntil = lingerUntil.filter { livingIDs.contains($0.key) }
+        if let f = focusedID, !livingIDs.contains(f) { focusedID = nil }
         // Only process listeners: the output device's (volume, format, alive) must survive.
         for id in Set(listeners.keys.map(\.id))
         where id != .system && id != outputDeviceID && !livingIDs.contains(id) {
@@ -386,6 +387,7 @@ final class AudioProcessController: ObservableObject {
         restoredIDs = []
         tapErrors = [:]
         lingerUntil = [:]
+        focusedID = nil
         outputDeviceID = .unknown   // its listeners are gone too; don't unlisten
         registerSystemListeners()
         let dev = readOutputDevice()

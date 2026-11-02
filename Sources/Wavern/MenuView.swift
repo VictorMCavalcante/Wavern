@@ -27,7 +27,8 @@ struct MenuView: View {
                     .padding(.horizontal, 2)
                     .padding(.top, 12)
                     .padding(.bottom, 6)
-                let highlighted = hoveredID ?? tiles.first(where: \.isPlaying)?.id
+                // A tile removed under the cursor never reports hover-out; ignore its stale id.
+                let highlighted = tiles.contains { $0.id == hoveredID } ? hoveredID : tiles.first(where: \.isPlaying)?.id
                 VStack(spacing: 6) {
                     ForEach(tiles) { process in
                         AudioProcessRow(process: process, isFocused: process.id == highlighted)
