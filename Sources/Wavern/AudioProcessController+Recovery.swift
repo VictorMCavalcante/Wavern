@@ -56,13 +56,16 @@ extension AudioProcessController {
         taps = [:]
         tapErrors = [:]
         let rebuilt = processes.filter(needsTap)
-        retire(old) { [hal = halQueue] in
-            // Queued behind the new taps' activations: a leak shows as more aggregates than taps.
-            hal.async { Self.logAggregateCount(expected: rebuilt.count) }
-        }
         for p in rebuilt {
             let mode: ProcessTap.Mode = keepMuteOnly.contains(p.id) && isMuted(p) ? .muteOnly : .control
             ensureTap(for: p, initialGain: effectiveGain(for: p), mode: mode)
+        }
+        // After the loop on purpose: the hop lands behind the new activations, so an app
+        // is never left without a tap (a muted app would play natively in that gap).
+        retire(old) { [hal = halQueue] in
+            // A leak shows as more aggregates than taps. The device list lags a destroy
+            // by a moment, so count after it settles.
+            hal.asyncAfter(deadline: .now() + 1) { Self.logAggregateCount(expected: rebuilt.count) }
         }
         log.notice("Tap rebuild (\(reason.rawValue, privacy: .public)): \(old.count) torn down, \(rebuilt.count) created")
     }
@@ -119,6 +122,14 @@ extension AudioProcessController {
             let verdict = TapHealth.verdict(snap, now: now, lastEvent: lastRouteEvent)
             guard verdict != .healthy else { continue }
             let name = tap.process.name
+            // Silence can be real (paused tab keeping its output open): one rebuild, then
+            // stop judging it on the old sound. Only a stalled tap counts toward give-up.
+            if verdict == .silentAfterEvent {
+                log.notice("Watchdog: \(name, privacy: .public) silent after route event, one retry")
+                carriedNonZero[id] = nil
+                needsRebuild = true
+                continue
+            }
             guard giveUp.strike(id) else {
                 log.notice("Watchdog: \(name, privacy: .public) \(String(describing: verdict), privacy: .public)")
                 needsRebuild = true

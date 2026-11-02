@@ -304,6 +304,10 @@ final class AudioProcessController: ObservableObject {
                     guard let self, self.taps[id] === tap else { return }
                     self.taps.removeValue(forKey: id)
                     self.tapErrors[id] = message
+                    // Mute is always mute: fall back to a mute-only tap (no aggregate needed).
+                    if tap.mode == .control, self.isMuted(tap.process) {
+                        self.ensureTap(for: tap.process, initialGain: 0, mode: .muteOnly)
+                    }
                 }
             }
         }
@@ -318,7 +322,7 @@ final class AudioProcessController: ObservableObject {
 
     private func pruneVanished(livingIDs: Set<AudioObjectID>) {
         for (id, tap) in taps where !livingIDs.contains(id) {
-            halQueue.async { tap.invalidate() }
+            retire([tap])   // off halQueue: a stalled destroy must not block new activations
             taps.removeValue(forKey: id)
         }
         volumes = volumes.filter { livingIDs.contains($0.key) }
@@ -373,7 +377,9 @@ final class AudioProcessController: ObservableObject {
     /// aggregates) died with it, so drop them without HAL calls and start over.
     private func handleServiceRestarted() {
         log.notice("coreaudiod restarted")
-        listeners = [:]
+        // System-object listeners survive the restart (that is how we got here); keep
+        // them so registerSystemListeners() doesn't add duplicates.
+        listeners = listeners.filter { $0.key.id == .system }
         // Their ids are stale; invalidating just clears our handles. On halQueue so it
         // finishes before any new tap activates (a reused id must not be destroyed).
         let dead = Array(taps.values)
