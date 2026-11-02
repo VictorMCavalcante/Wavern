@@ -2,39 +2,98 @@ import AppKit
 import CoreAudio
 import SwiftUI
 
+/// Panel content, CrispShot style: header with the output chip, master tile,
+/// "Now playing" tiles (one highlighted), footer chips.
 struct MenuView: View {
     @EnvironmentObject var controller: AudioProcessController
     @EnvironmentObject var browserTabStore: BrowserTabStore
     @EnvironmentObject var updateChecker: UpdateChecker
     @State private var launchAtLogin = LoginItem.isEnabled
+    @State private var hoveredID: AudioObjectID?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            header
             if controller.masterVolume != nil {
-                masterVolumeRow
-                Divider().opacity(0.5)
+                masterTile.padding(.top, 10)
             }
-            let playing = controller.playing
-            if playing.isEmpty {
+            let tiles = orderedPlaying
+            if tiles.isEmpty {
                 emptyState
             } else {
+                Text("Now playing")
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .foregroundStyle(Theme.quiet)
+                    .padding(.horizontal, 2)
+                    .padding(.top, 12)
+                    .padding(.bottom, 6)
+                let highlighted = hoveredID ?? tiles.first(where: \.isPlaying)?.id
                 VStack(spacing: 6) {
-                    ForEach(playing) { process in
-                        AudioProcessRow(process: process)
+                    ForEach(tiles) { process in
+                        AudioProcessRow(process: process, isFocused: process.id == highlighted)
+                            .onHover { hoveredID = $0 ? process.id : (hoveredID == process.id ? nil : hoveredID) }
                             .transition(.asymmetric(
                                 insertion: .move(edge: .top).combined(with: .opacity),
                                 removal: .opacity))
                     }
                 }
-                .padding(8)
-                .animation(.snappy(duration: 0.3), value: playing.map(\.id))
+                .animation(.snappy(duration: 0.3), value: tiles.map(\.id))
             }
-            Divider().opacity(0.5)
             footer
         }
+        .padding(12)
         .frame(width: Theme.panelWidth)
         .background(BrandSurface())
     }
+
+    /// Focused app first, then the rest that are playing, then the lingering ones.
+    private var orderedPlaying: [AudioProcess] {
+        let focused = controller.focusedID
+        return controller.playing.enumerated().sorted { a, b in
+            func rank(_ p: AudioProcess) -> Int { p.id == focused ? 0 : (p.isPlaying ? 1 : 2) }
+            let (ra, rb) = (rank(a.element), rank(b.element))
+            return ra != rb ? ra < rb : a.offset < b.offset
+        }.map(\.element)
+    }
+
+    // MARK: Header
+
+    private var header: some View {
+        HStack(spacing: 8) {
+            Text("Wavern")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.primary)
+            Spacer(minLength: 8)
+            if !controller.outputDevices.isEmpty {
+                MenuChip {
+                    Section("Volumes are saved per device") {
+                        ForEach(controller.outputDevices) { device in
+                            Button { controller.selectOutputDevice(device.id) } label: {
+                                Label(device.name, systemImage: device.id == controller.outputDeviceID ? "checkmark" : device.symbol)
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: currentDevice?.symbol ?? "speaker.wave.2")
+                            .symbolRenderingMode(.hierarchical)
+                        Text(currentDevice?.name ?? controller.outputDeviceName)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .frame(maxWidth: 150, alignment: .leading)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(Theme.quiet)
+                    }
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.icon)
+                }
+                .help("Output device. Each device keeps its own per-app volumes.")
+            }
+        }
+    }
+
+    // MARK: Master
 
     private var masterVolume: Binding<Double> {
         Binding(
@@ -43,151 +102,132 @@ struct MenuView: View {
         )
     }
 
-    private var masterVolumeRow: some View {
+    private var masterTile: some View {
         HStack(spacing: 10) {
             Image(systemName: "speaker.fill")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 13))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(Theme.icon)
+                .frame(width: 16)
             VolumeSlider(value: masterVolume, maxValue: 1, isMuted: false)
                 .frame(height: 16)
-            Image(systemName: "speaker.wave.3.fill")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
+            Text("\(Int(((controller.masterVolume ?? 0) * 100).rounded()))%")
+                .font(.system(size: 10).monospacedDigit())
+                .foregroundStyle(Theme.quiet)
+                .frame(width: 30, alignment: .trailing)
+                .contentTransition(.numericText())
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .background(Theme.hover, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .help("System output volume")
     }
 
+    // MARK: Empty
+
     private var emptyState: some View {
         VStack(spacing: 10) {
-            Image(systemName: "waveform")
-                .font(.system(size: 30, weight: .light))
-                .foregroundStyle(
-                    LinearGradient(colors: [.accentColor, .accentColor.opacity(0.35)],
-                                   startPoint: .top, endPoint: .bottom))
+            Image(nsImage: BrandGlyph.menuBarImage(playing: false))
+                .renderingMode(.template)
+                .resizable()
+                .frame(width: 36, height: 36)
+                .foregroundStyle(Theme.quiet)
             Text("Nothing is playing")
-                .font(.callout)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Theme.icon)
             Text("Apps show up here the moment they make a sound.")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 10))
+                .foregroundStyle(Theme.quiet)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 28)
     }
 
+    // MARK: Footer
+
     private var footer: some View {
         VStack(alignment: .leading, spacing: 6) {
+            Rectangle().fill(Theme.divider).frame(height: 1)
+                .padding(.top, 8)
+                .padding(.bottom, 2)
             HStack(spacing: 6) {
-                Image(systemName: "person.wave.2")
-                    .font(.system(size: 11))
-                    .foregroundStyle(controller.isDucking ? Color.accentColor : .secondary)
-                Text("Duck others during calls")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Picker("", selection: $controller.duckLevel) {
-                    ForEach(AudioProcessController.duckLevels, id: \.self) { level in
-                        Text(level >= 1 ? "Off" : "to \(Int(level * 100))%").tag(level)
-                    }
-                }
-                .labelsHidden()
-                .controlSize(.small)
-                .frame(width: 84)
-            }
-            if !controller.outputDevices.isEmpty {
-                HStack(spacing: 6) {
-                    Image(systemName: currentDevice?.symbol ?? "speaker.wave.2")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                    Picker("", selection: deviceSelection) {
-                        ForEach(controller.outputDevices) { device in
-                            Label(device.name, systemImage: device.symbol).tag(device.id)
+                MenuChip {
+                    Section("Lower other apps during calls") {
+                        ForEach(AudioProcessController.duckLevels, id: \.self) { level in
+                            Button { controller.duckLevel = level } label: {
+                                if level == controller.duckLevel {
+                                    Label(duckLabel(level), systemImage: "checkmark")
+                                } else {
+                                    Text(duckLabel(level))
+                                }
+                            }
                         }
                     }
-                    .labelsHidden()
-                    .controlSize(.small)
-                    Spacer()
-                    Text("volumes saved per device")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
-                .help("Output device. Each device keeps its own per-app volumes.")
-            }
-            HStack(spacing: 6) {
-                Image(systemName: "playpause")
-                    .font(.system(size: 11))
-                    .foregroundStyle(controller.mediaKeysEnabled && !controller.mediaKeysNeedPermission
-                                     ? Color.accentColor : .secondary)
-                Text("Media keys follow the playing app")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Toggle("", isOn: $controller.mediaKeysEnabled)
-                    .toggleStyle(.switch)
-                    .labelsHidden()
-                    .controlSize(.mini)
-            }
-            .help("F7/F8/F9 and AirPods taps control the app that is actually playing, not whatever macOS picked.")
-            if controller.mediaKeysNeedPermission {
-                HStack(spacing: 4) {
-                    Label("Needs Accessibility access.", systemImage: "exclamationmark.triangle")
-                        .font(.caption2)
-                        .foregroundStyle(.orange)
-                    Button("Open settings") {
-                        NSWorkspace.shared.open(URL(string:
-                            "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "person.wave.2")
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(controller.isDucking ? AnyShapeStyle(Theme.accentLight) : AnyShapeStyle(Theme.icon))
+                        Text("Calls · \(duckLabel(controller.duckLevel))")
                     }
-                    .buttonStyle(.borderless).font(.caption2)
-                    Button("Retry") { controller.retryMediaKeys() }
-                        .buttonStyle(.borderless).font(.caption2)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.icon)
                 }
-            }
-            HStack {
-                Toggle("Launch at login", isOn: launchAtLoginBinding)
-                    .toggleStyle(.checkbox)
-                    .controlSize(.small)
+                .help("Lower other apps while a call app uses the microphone")
                 Spacer()
                 if updateChecker.updateURL != nil {
-                    Button(updateChecker.isInstalling ? "Installing…" : "Update available") {
-                        updateChecker.installUpdate()
+                    Chip {
+                        Button(updateChecker.isInstalling ? "Installing…" : "Update") { updateChecker.installUpdate() }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(Theme.accentLight)
+                            .disabled(updateChecker.isInstalling)
                     }
-                    .buttonStyle(.borderless)
-                    .font(.caption)
-                    .foregroundStyle(Color.accentColor)
-                    .disabled(updateChecker.isInstalling)
                 }
-                Button {
-                    NSApp.terminate(nil)
-                } label: {
-                    Image(systemName: "power")
-                        .font(.system(size: 11, weight: .semibold))
+                MenuChip { settingsMenu } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 11))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(Theme.icon)
                 }
-                .buttonStyle(.borderless)
-                .foregroundStyle(.secondary)
-                .help("Quit Wavern")
+                .help("Settings")
+            }
+            if controller.mediaKeysNeedPermission {
+                Label("Media keys need Accessibility access — see ⚙︎", systemImage: "exclamationmark.triangle")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.quiet)
             }
             if !controller.audioPermissionGranted {
-                Label("First volume change asks for audio permission.",
-                      systemImage: "info.circle")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                Label("First volume change asks for audio permission.", systemImage: "info.circle")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.quiet)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+    }
+
+    @ViewBuilder private var settingsMenu: some View {
+        Toggle("Media keys follow the playing app", isOn: $controller.mediaKeysEnabled)
+        if controller.mediaKeysNeedPermission {
+            Button("Open Accessibility settings…") {
+                NSWorkspace.shared.open(URL(string:
+                    "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+            }
+            Button("Retry media keys") { controller.retryMediaKeys() }
+        }
+        Toggle("Launch at login", isOn: launchAtLoginBinding)
+        if updateChecker.updateURL != nil {
+            Button(updateChecker.isInstalling ? "Installing update…" : "Install update") { updateChecker.installUpdate() }
+                .disabled(updateChecker.isInstalling)
+        }
+        Divider()
+        Button("Quit Wavern") { NSApp.terminate(nil) }
+    }
+
+    private func duckLabel(_ level: Float) -> String {
+        level >= 1 ? "Off" : "\(Int(level * 100))%"
     }
 
     private var currentDevice: OutputDevice? {
         controller.outputDevices.first { $0.id == controller.outputDeviceID }
-    }
-
-    private var deviceSelection: Binding<AudioObjectID> {
-        Binding(
-            get: { controller.outputDeviceID },
-            set: { controller.selectOutputDevice($0) }
-        )
     }
 
     private var launchAtLoginBinding: Binding<Bool> {

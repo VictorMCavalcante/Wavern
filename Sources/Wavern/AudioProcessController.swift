@@ -90,6 +90,8 @@ final class AudioProcessController: ObservableObject {
 
     static let lingerInterval: TimeInterval = 30
     @Published private(set) var lingerUntil: [AudioObjectID: Date] = [:]
+    /// The app that most recently started playing; the panel highlights it and lists it first.
+    @Published private(set) var focusedID: AudioObjectID?
     private var lingerTimer: Timer?
 
     /// Called whenever a process starts or stops output: it was audible around now.
@@ -444,6 +446,7 @@ final class AudioProcessController: ObservableObject {
             listenProcess(kAudioProcessPropertyIsRunningInput, on: process.id)
             if process.isPlaying && !previouslyPlaying.contains(process.id) {
                 noteActivity(process.id)
+                focusedID = process.id
             }
             restorePersistedState(for: process)
         }
