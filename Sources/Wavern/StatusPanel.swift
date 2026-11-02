@@ -16,6 +16,7 @@ final class StatusPanel {
     private let target = ClickTarget()
     private var panel: Panel?
     private var clickMonitor: Any?
+    private var appSwitchObserver: NSObjectProtocol?
     private var resizeObserver: NSObjectProtocol?
     private var playingSub: AnyCancellable?
 
@@ -69,6 +70,11 @@ final class StatusPanel {
         }
         // Global monitors only see events bound for other apps, so clicks in our own menus,
         // pickers and sheets (separate windows of this app) never close the panel.
+        // Cmd-Tab or Mission Control: another app came forward without a click.
+        appSwitchObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.close() }
+        }
         clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] _ in
             MainActor.assumeIsolated { self?.close() }
         }
@@ -82,6 +88,8 @@ final class StatusPanel {
         self.panel = nil
         clickMonitor.map(NSEvent.removeMonitor)
         clickMonitor = nil
+        appSwitchObserver.map(NSWorkspace.shared.notificationCenter.removeObserver)
+        appSwitchObserver = nil
         resizeObserver.map(NotificationCenter.default.removeObserver)
         resizeObserver = nil
         panel.onEscape = {}

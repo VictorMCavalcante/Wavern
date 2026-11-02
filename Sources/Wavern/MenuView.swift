@@ -10,6 +10,7 @@ struct MenuView: View {
     @EnvironmentObject var updateChecker: UpdateChecker
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var hoveredID: AudioObjectID?
+    @State private var listHeight: CGFloat?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -29,6 +30,7 @@ struct MenuView: View {
                     .padding(.bottom, 6)
                 // A tile removed under the cursor never reports hover-out; ignore its stale id.
                 let highlighted = tiles.contains { $0.id == hoveredID } ? hoveredID : tiles.first(where: \.isPlaying)?.id
+                ScrollView {
                 VStack(spacing: 6) {
                     ForEach(tiles) { process in
                         AudioProcessRow(process: process, isFocused: process.id == highlighted)
@@ -39,6 +41,16 @@ struct MenuView: View {
                     }
                 }
                 .animation(.snappy(duration: 0.3), value: tiles.map(\.id))
+                .padding(.horizontal, 12)   // room for the focused tile's glow inside the clip
+                .padding(.vertical, 6)
+                .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { listHeight = $0 }
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                // Grows with the tiles up to the cap, then scrolls. Until measured, guess
+                // from the tile count so the panel opens near its final size.
+                .frame(height: min(listHeight ?? CGFloat(tiles.count) * 76 + 12, Self.listMaxHeight))
+                .padding(.horizontal, -12)
+                .padding(.vertical, -6)
             }
             footer
         }
@@ -46,6 +58,9 @@ struct MenuView: View {
         .frame(width: Theme.panelWidth)
         .background(BrandSurface())
     }
+
+    /// Panel cap minus header, master tile and footer.
+    private static let listMaxHeight = Theme.panelMaxHeight - 170
 
     /// Focused app first, then the rest that are playing, then the lingering ones.
     private var orderedPlaying: [AudioProcess] {
