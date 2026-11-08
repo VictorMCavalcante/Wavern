@@ -39,6 +39,12 @@ struct AudioProcess: Identifiable, Hashable {
         return Self.chromiumBrowsers[b]
     }
 
+    /// Which Wavern tab files this browser publishes ("" = Chrome extension, "birdd" = Birdd); nil = no tab control.
+    var browserTabSource: String? {
+        if chromiumBrowserName != nil { return "" }
+        return resolvedBundleID == "app.birdd.Birdd" ? "birdd" : nil
+    }
+
     private static let chromiumBrowsers: [String: String] = [
         "com.google.Chrome":           "Chrome",
         "company.thebrowser.Browser":  "Arc",
@@ -79,8 +85,19 @@ struct AudioProcess: Identifiable, Hashable {
             current = parentPID(of: p)
             hops += 1
         }
+        // WebKit plays audio from its GPU process, whose parent is launchd; the
+        // responsible pid points back at the app hosting the web view.
+        if let responsible = responsiblePID?(pid), responsible != pid,
+           let app = NSRunningApplication(processIdentifier: responsible), app.activationPolicy == .regular {
+            return app
+        }
         return firstMatch
     }
+
+    private static let responsiblePID: (@convention(c) (pid_t) -> pid_t)? = {
+        guard let sym = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "responsibility_get_pid_responsible_for_pid") else { return nil }
+        return unsafeBitCast(sym, to: (@convention(c) (pid_t) -> pid_t).self)
+    }()
 
     private static func parentPID(of pid: pid_t) -> pid_t? {
         var info = kinfo_proc()
