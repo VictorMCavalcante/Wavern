@@ -111,7 +111,7 @@ struct BrowserTabRow: View {
         let placeholder = Image(systemName: "globe")
             .font(.system(size: 10))
             .foregroundStyle(.tertiary)
-        if let s = tab.favIconUrl, let url = URL(string: s), url.scheme?.hasPrefix("http") == true {
+        if let s = tab.favIconUrl, let url = URL(string: s), url.scheme?.hasPrefix("http") == true || url.isFileURL {
             AsyncImage(url: url) { phase in
                 if let image = phase.image {
                     image.resizable().frame(width: 14, height: 14).clipShape(RoundedRectangle(cornerRadius: 3))

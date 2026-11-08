@@ -21,8 +21,8 @@ struct AudioProcessRow: View {
     }
 
     private var browserTabs: [BrowserTab] {
-        guard process.chromiumBrowserName != nil, browserTabStore.isConnected else { return [] }
-        return browserTabStore.audibleTabs
+        guard let source = process.browserTabSource, browserTabStore.isConnected(source) else { return [] }
+        return browserTabStore.tabs(for: source)
     }
 
     var body: some View {
@@ -110,7 +110,7 @@ struct AudioProcessRow: View {
                 .padding(.leading, 28)
             }
 
-            if process.chromiumBrowserName != nil && !browserTabStore.isConnected {
+            if process.chromiumBrowserName != nil && !browserTabStore.isConnected("") {
                 Button("Install browser extension for tab names →") {
                     showExtensionSheet = true
                 }
