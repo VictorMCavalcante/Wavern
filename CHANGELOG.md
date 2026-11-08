@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.6.0](https://github.com/VictorMCavalcante/Wavern/compare/v1.5.1...v1.6.0) (2026-11-08)
+
+
+### Features
+
+* read per-browser tab files and write volumes to the owner's file ([b650d2b](https://github.com/VictorMCavalcante/Wavern/commit/b650d2b9f3ce43b235e41d844ee882e8ad21740f))
+
+
+### Bug Fixes
+
+* attribute WebKit GPU process audio to the hosting app ([ad996f6](https://github.com/VictorMCavalcante/Wavern/commit/ad996f6d54a51590a844169124dc7e3c84fbe81c))
+
 ## [1.5.1](https://github.com/VictorMCavalcante/Wavern/compare/v1.5.0...v1.5.1) (2026-09-04)
 
 
