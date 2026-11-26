@@ -181,6 +181,7 @@ final class ProcessTap: @unchecked Sendable {
             throw TapError.create("AudioDeviceCreateIOProcIDWithBlock", status)
         }
         ioProcID = procID
+        if inputStreams > 1 { useOnlyTapInput(procID, streams: inputStreams) }
 
         status = AudioDeviceStart(aggregateID, procID)
         guard status == noErr else {
@@ -191,6 +192,26 @@ final class ProcessTap: @unchecked Sendable {
         isActive = true
         activatedAt = ProcessInfo.processInfo.systemUptime
         log.info("Tap active for \(self.process.name, privacy: .public) (pid \(self.process.pid))")
+    }
+
+    /// The aggregate's inputs are the output device's own mic streams, then the tap.
+    /// Turning the mic streams off for our IOProc keeps the HAL from starting the mic
+    /// (orange indicator, headset dropping to its call profile). The tap stays last.
+    private func useOnlyTapInput(_ procID: AudioDeviceIOProcID, streams: Int) {
+        let offset = MemoryLayout<AudioHardwareIOProcStreamUsage>.offset(of: \.mStreamIsOn)!
+        let size = offset + streams * MemoryLayout<UInt32>.size
+        let raw = UnsafeMutableRawPointer.allocate(byteCount: size, alignment: 8)
+        defer { raw.deallocate() }
+        raw.storeBytes(of: unsafeBitCast(procID, to: UnsafeMutableRawPointer.self), as: UnsafeMutableRawPointer.self)
+        raw.storeBytes(of: UInt32(streams), toByteOffset: MemoryLayout<UnsafeMutableRawPointer>.size, as: UInt32.self)
+        for i in 0..<streams {
+            raw.storeBytes(of: i == streams - 1 ? 1 : 0, toByteOffset: offset + i * 4, as: UInt32.self)
+        }
+        var address = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyIOProcStreamUsage,
+                                                 mScope: kAudioObjectPropertyScopeInput,
+                                                 mElement: kAudioObjectPropertyElementMain)
+        let status = AudioObjectSetPropertyData(aggregateID, &address, 0, nil, UInt32(size), raw)
+        log.notice("Mic streams off for \(self.process.name, privacy: .public): status \(status)")
     }
 
     func invalidate() {

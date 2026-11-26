@@ -167,6 +167,13 @@ final class AudioProcessController: ObservableObject {
 
     // +Recovery
     var rebuildWork: DispatchWorkItem?
+    /// Processes the pending rebuild covers; nil = all.
+    var rebuildScope: Set<AudioObjectID>?
+    /// Output format the taps were built for; format listeners rebuild only when it really changes.
+    var tapFormat = ""
+    var deviceListWork: DispatchWorkItem?
+    /// Master-volume writes go here: a stalled HAL write must not freeze the panel mid-drag.
+    let volumeQueue = DispatchQueue(label: "com.wavern.volume", qos: .userInitiated)
     var lastRouteEvent: TimeInterval?
     var watchdogTimer: Timer?
     var giveUp = GiveUpPolicy()
@@ -286,7 +293,7 @@ final class AudioProcessController: ObservableObject {
     /// Existing tap, or a new one that starts at `initialGain` (never a jump from 100%).
     @discardableResult
     func ensureTap(for process: AudioProcess, initialGain: Float,
-                   mode: ProcessTap.Mode = .control) -> ProcessTap {
+                   mode: ProcessTap.Mode = .control, replacing old: ProcessTap? = nil) -> ProcessTap {
         if let existing = taps[process.id] { return existing }
         let tap = ProcessTap(process: process, mode: mode)
         tap.gain = initialGain
@@ -299,6 +306,8 @@ final class AudioProcessController: ObservableObject {
             do {
                 let started = Date()
                 try tap.activate()
+                // Both taps now carry this app; the old one fades out within a buffer.
+                old?.gain = 0
                 let elapsed = Date().timeIntervalSince(started)
                 if elapsed > 1 {
                     log.error("Tap activation for \(name, privacy: .public) took \(elapsed, format: .fixed(precision: 1))s — coreaudiod stalled")
@@ -373,7 +382,7 @@ final class AudioProcessController: ObservableObject {
         listen(kAudioHardwarePropertyDefaultOutputDevice, on: .system) { [weak self] in
             self?.handleOutputDeviceChange()
         }
-        listen(kAudioHardwarePropertyDevices, on: .system) { [weak self] in self?.refreshOutputDevices() }
+        listen(kAudioHardwarePropertyDevices, on: .system) { [weak self] in self?.scheduleOutputDevicesRefresh() }
         listen(kAudioHardwarePropertyServiceRestarted, on: .system) { [weak self] in
             self?.handleServiceRestarted()
         }

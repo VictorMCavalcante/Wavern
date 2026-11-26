@@ -25,8 +25,19 @@ extension AudioProcessController {
 
     /// Coalesced: a burst of triggers (rapid device switching) yields one rebuild,
     /// run once the route has settled. Bluetooth settles slower.
-    func rebuildAllTaps(reason: RebuildReason) {
+    func rebuildAllTaps(reason: RebuildReason) { rebuildTaps(reason: reason, only: nil) }
+
+    /// `only` = rebuild just these processes (watchdog); nil = all of them.
+    /// Requests that land while one is pending merge into it; nil wins.
+    func rebuildTaps(reason: RebuildReason, only ids: Set<AudioObjectID>?) {
         log.notice("Tap rebuild requested: \(reason.rawValue, privacy: .public)")
+        if rebuildWork == nil {
+            rebuildScope = ids
+        } else if let scope = rebuildScope, let ids {
+            rebuildScope = scope.union(ids)
+        } else {
+            rebuildScope = nil
+        }
         if reason != .watchdog {
             lastRouteEvent = ProcessInfo.processInfo.systemUptime
             giveUp.reset()
@@ -46,26 +57,34 @@ extension AudioProcessController {
 
     private func performRebuild(_ reason: RebuildReason) {
         rebuildWork = nil
-        let old = Array(taps.values)
+        let scope = rebuildScope
+        rebuildScope = nil
+        let old = taps.values.filter { scope?.contains($0.process.id) ?? true }
         for t in old where t.lastNonZero > 0 {
             carriedNonZero[t.process.id] = max(carriedNonZero[t.process.id] ?? 0, t.lastNonZero)
         }
         // A muted app the watchdog gave up on stays on its mute-only tap; any other rebuild retries control.
         let keepMuteOnly = reason == .watchdog
             ? Set(old.filter { $0.mode == .muteOnly }.map(\.process.id)) : []
-        taps = [:]
-        tapErrors = [:]
-        let rebuilt = processes.filter(needsTap)
+        let oldByID = Dictionary(old.map { ($0.process.id, $0) }, uniquingKeysWith: { a, _ in a })
+        if let scope {
+            for id in scope { taps[id] = nil; tapErrors[id] = nil }
+        } else {
+            taps = [:]
+            tapErrors = [:]
+        }
+        let rebuilt = processes.filter { (scope?.contains($0.id) ?? true) && needsTap($0) }
         for p in rebuilt {
             let mode: ProcessTap.Mode = keepMuteOnly.contains(p.id) && isMuted(p) ? .muteOnly : .control
-            ensureTap(for: p, initialGain: effectiveGain(for: p), mode: mode)
+            ensureTap(for: p, initialGain: effectiveGain(for: p), mode: mode, replacing: oldByID[p.id])
         }
         // After the loop on purpose: the hop lands behind the new activations, so an app
         // is never left without a tap (a muted app would play natively in that gap).
+        let expected = taps.count
         retire(old) { [hal = halQueue] in
             // A leak shows as more aggregates than taps. The device list lags a destroy
             // by a moment, so count after it settles.
-            hal.asyncAfter(deadline: .now() + 1) { Self.logAggregateCount(expected: rebuilt.count) }
+            hal.asyncAfter(deadline: .now() + 1) { Self.logAggregateCount(expected: expected) }
         }
         log.notice("Tap rebuild (\(reason.rawValue, privacy: .public)): \(old.count) torn down, \(rebuilt.count) created")
     }
@@ -111,7 +130,7 @@ extension AudioProcessController {
         guard rebuildWork == nil else { return }   // a rebuild is already on its way
         let now = ProcessInfo.processInfo.systemUptime
         let playing = Set(processes.filter(\.isPlaying).map(\.id))
-        var needsRebuild = false
+        var needsRebuild: Set<AudioObjectID> = []
         for (id, tap) in taps where tap.mode == .control && tap.isActive {
             if tap.lastNonZero > 0 { carriedNonZero[id] = nil }
             // A just-built tap gets stallTimeout to deliver sound before it is judged.
@@ -127,12 +146,12 @@ extension AudioProcessController {
             if verdict == .silentAfterEvent {
                 log.notice("Watchdog: \(name, privacy: .public) silent after route event, one retry")
                 carriedNonZero[id] = nil
-                needsRebuild = true
+                needsRebuild.insert(id)
                 continue
             }
             guard giveUp.strike(id) else {
                 log.notice("Watchdog: \(name, privacy: .public) \(String(describing: verdict), privacy: .public)")
-                needsRebuild = true
+                needsRebuild.insert(id)
                 continue
             }
             taps.removeValue(forKey: id)
@@ -145,7 +164,7 @@ extension AudioProcessController {
             }
             retire([tap])
         }
-        if needsRebuild { rebuildAllTaps(reason: .watchdog) }
+        if !needsRebuild.isEmpty { rebuildTaps(reason: .watchdog, only: needsRebuild) }
     }
 
     /// Our private aggregates are invisible to other processes, so only we can count them.
