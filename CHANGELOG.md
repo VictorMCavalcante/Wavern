@@ -1,5 +1,38 @@
 # Changelog
 
+## [1.6.0](https://github.com/VictorMCavalcante/Wavern/compare/v1.5.1...v1.6.0) (2026-11-26)
+
+
+### Features
+
+* **brand:** Wavern app icon, menu bar glyph and brand kit ([9542ee7](https://github.com/VictorMCavalcante/Wavern/commit/9542ee77fdd4c41b95aacb7cb835768ab896ca7f))
+* read per-browser tab files and write volumes to the owner's file ([b650d2b](https://github.com/VictorMCavalcante/Wavern/commit/b650d2b9f3ce43b235e41d844ee882e8ad21740f))
+* **recovery:** pause idle taps so quiet apps cost no IO ([07cf188](https://github.com/VictorMCavalcante/Wavern/commit/07cf18860c1e63df8a30c596ff01128e1fdf186e))
+* **recovery:** pure watchdog verdict and device-change classification ([c09aab3](https://github.com/VictorMCavalcante/Wavern/commit/c09aab3197ada57b775c70700b264ee7d193c0ff))
+* **recovery:** watchdog rebuilds dead taps; give up keeps muted apps muted ([9cd466e](https://github.com/VictorMCavalcante/Wavern/commit/9cd466ebbb1d0f3bba5b3add517da19b052ab5b5))
+* stability rework, CrispShot panel, Sparkle updates ([31962de](https://github.com/VictorMCavalcante/Wavern/commit/31962ded5788888ca87cb23e53d9a50dbbda1c2a))
+* **ui:** CrispShot-style panel content with chips, focus tile and lilac sliders ([34986e9](https://github.com/VictorMCavalcante/Wavern/commit/34986e9b36839dd33e1bcc3dae5e04aa71e084e3))
+* **ui:** custom status panel with CrispShot theme; no rendering while closed ([3a5703b](https://github.com/VictorMCavalcante/Wavern/commit/3a5703bdf81cbc567ddbe7117b3f6a98014765cc))
+* **updates:** replace the hand-rolled updater with Sparkle; Developer ID-ready CI ([93d237b](https://github.com/VictorMCavalcante/Wavern/commit/93d237b45db0427bf42b78e9b7c4552ff3f028b1))
+
+
+### Bug Fixes
+
+* attribute WebKit GPU process audio to the hosting app ([ad996f6](https://github.com/VictorMCavalcante/Wavern/commit/ad996f6d54a51590a844169124dc7e3c84fbe81c))
+* **ducking:** duck only while a call app is using the microphone ([747ca93](https://github.com/VictorMCavalcante/Wavern/commit/747ca93c6e9f829a60d9d206a07f88dc6b882823))
+* **ducking:** poll ducker mic state while ducking is on ([aa0d9aa](https://github.com/VictorMCavalcante/Wavern/commit/aa0d9aa8e70da78a91b014c68bc3665e11cd6aa5))
+* **recovery:** keep output device listeners when pruning vanished processes ([e6866c8](https://github.com/VictorMCavalcante/Wavern/commit/e6866c8446a64b2c03d0e7d59cab4a284aff735b))
+* **recovery:** load new profile before rebuild; drop stale ids on coreaudiod restart ([0881bd2](https://github.com/VictorMCavalcante/Wavern/commit/0881bd216367e11321e6653abca70bb753bffb71))
+* **recovery:** never leave an app untapped during a rebuild; muted stays muted on failed activation ([9d5dcc2](https://github.com/VictorMCavalcante/Wavern/commit/9d5dcc2d4a346efa593b4e61eccf6ae709dd244a))
+* **recovery:** single rebuild path for device, format, wake and coreaudiod restart ([c144749](https://github.com/VictorMCavalcante/Wavern/commit/c144749325e9fe8b8de48707f8926f67deb2952e))
+* **recovery:** targeted watchdog rebuilds, no doubled audio, quieter device events ([2df893f](https://github.com/VictorMCavalcante/Wavern/commit/2df893f9b6c7aa9c59e76b95fc3b7a23c4f80581))
+* retry keeps mute state, safe readArray, debounced tab writes, apple-events entitlement, safer updater ([8d81fd2](https://github.com/VictorMCavalcante/Wavern/commit/8d81fd2fa4588e33305bc61d722d3ccf13d05d47))
+* **settings:** a saved volume of 0 is mute, never a silent unmuted app ([6df1da3](https://github.com/VictorMCavalcante/Wavern/commit/6df1da34f7334a2e5065e607db97b59f1dfd20b5))
+* **settings:** unmuting clears a stale saved volume of 0 ([98218c3](https://github.com/VictorMCavalcante/Wavern/commit/98218c3a00f035144f25341cebc6bf5011a12385))
+* **tap:** channel-aware render with gain ramp; record IO timestamps; no tap leak on setup error ([56d3323](https://github.com/VictorMCavalcante/Wavern/commit/56d33230c845a52dd0ed843ea8db473fc7d347f8))
+* **ui:** cap the tile list height and scroll; close the panel on app switch; name command-line tools ([8317c8c](https://github.com/VictorMCavalcante/Wavern/commit/8317c8cd573724dc2a83bb119335e6e5da643114))
+* **ui:** drop stale focused and hovered ids when their tile goes away ([2244111](https://github.com/VictorMCavalcante/Wavern/commit/2244111fe15e79dcb97d4065a9c845873b1848b4))
+
 ## [1.5.1](https://github.com/VictorMCavalcante/Wavern/compare/v1.5.0...v1.5.1) (2026-09-04)
 
 
