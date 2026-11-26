@@ -93,11 +93,14 @@ final class AudioProcessController: ObservableObject {
     /// The app that most recently started playing; the panel highlights it and lists it first.
     @Published private(set) var focusedID: AudioObjectID?
     private var lingerTimer: Timer?
+    /// Last run-state change per process; drives idle tap pausing.
+    var lastActivity: [AudioObjectID: Date] = [:]
 
     /// Called whenever a process starts or stops output: it was audible around now.
     func noteActivity(_ id: AudioObjectID) {
         log.info("Audio activity on process object \(id)")
         lingerUntil[id] = Date().addingTimeInterval(Self.lingerInterval)
+        lastActivity[id] = Date()
         scheduleLingerExpiry()
     }
 
@@ -144,6 +147,7 @@ final class AudioProcessController: ObservableObject {
 
     private func listenProcess(_ selector: AudioObjectPropertySelector, on objectID: AudioObjectID) {
         listen(selector, on: objectID) { [weak self] in
+            self?.resumeIdleTap(objectID)
             self?.noteActivity(objectID)
             self?.reload()
         }
@@ -346,6 +350,7 @@ final class AudioProcessController: ObservableObject {
         tapErrors = tapErrors.filter { livingIDs.contains($0.key) }
         restoredIDs = restoredIDs.filter { livingIDs.contains($0) }
         lingerUntil = lingerUntil.filter { livingIDs.contains($0.key) }
+        lastActivity = lastActivity.filter { livingIDs.contains($0.key) }
         if let f = focusedID, !livingIDs.contains(f) { focusedID = nil }
         // Only process listeners: the output device's (volume, format, alive) must survive.
         for id in Set(listeners.keys.map(\.id))
@@ -407,7 +412,7 @@ final class AudioProcessController: ObservableObject {
         muted = []
         restoredIDs = []
         tapErrors = [:]
-        lingerUntil = [:]
+        lingerUntil = [:]; lastActivity = [:]
         focusedID = nil
         outputDeviceID = .unknown   // its listeners are gone too; don't unlisten
         registerSystemListeners()
@@ -476,6 +481,7 @@ final class AudioProcessController: ObservableObject {
             restorePersistedState(for: process)
         }
         pruneVanished(livingIDs: living)
+        updateIdleTaps()
         updateDucking()
         refreshNowPlaying(living: living)
         browserTabStore.refresh()

@@ -102,6 +102,40 @@ extension AudioProcessController {
         }
     }
 
+    // MARK: Idle
+
+    /// Quiet this long (no output, no run-state change) → stop the tap's IO.
+    static let idleTimeout: TimeInterval = 60
+
+    /// Pause taps of apps that went quiet; resume the ones playing again.
+    /// Muted apps never pause: their audio would leak out natively on the next sound.
+    func updateIdleTaps() {
+        let now = Date()
+        let byID = Dictionary(processes.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        for (id, tap) in taps where tap.mode == .control {
+            guard let p = byID[id] else { continue }
+            let lastActive = lastActivity[id] ?? .distantPast
+            let idle = !p.isPlaying && !isMuted(p) && now.timeIntervalSince(lastActive) > Self.idleTimeout
+            if idle, !tap.idlePaused {
+                tap.idlePaused = true
+                log.info("Idle: pausing tap for \(p.name, privacy: .public)")
+                halQueue.async { tap.pauseIO() }
+            } else if !idle, tap.idlePaused {
+                resumeIdleTap(id)
+            }
+        }
+    }
+
+    /// The app's run state just changed (it is probably about to play): restart IO now,
+    /// without waiting for the reload, so the first sound is already at our level.
+    func resumeIdleTap(_ id: AudioObjectID) {
+        guard let tap = taps[id], tap.idlePaused else { return }
+        tap.idlePaused = false
+        tap.resumedAt = ProcessInfo.processInfo.systemUptime
+        log.info("Idle: resuming tap for \(tap.process.name, privacy: .public)")
+        halQueue.async { tap.resumeIO() }
+    }
+
     // MARK: Watchdog
 
     func startWatchdogIfNeeded() {
@@ -127,15 +161,17 @@ extension AudioProcessController {
     private func watchdogTick() {
         carriedNonZero = carriedNonZero.filter { taps[$0.key] != nil }
         if taps.values.contains(where: { $0.lastNonZero > 0 }) { rememberPermissionGranted() }
+        updateIdleTaps()
         guard rebuildWork == nil else { return }   // a rebuild is already on its way
         let now = ProcessInfo.processInfo.systemUptime
         let playing = Set(processes.filter(\.isPlaying).map(\.id))
         var needsRebuild: Set<AudioObjectID> = []
-        for (id, tap) in taps where tap.mode == .control && tap.isActive {
+        for (id, tap) in taps where tap.mode == .control && tap.isActive && !tap.idlePaused {
             if tap.lastNonZero > 0 { carriedNonZero[id] = nil }
-            // A just-built tap gets stallTimeout to deliver sound before it is judged.
-            guard now - tap.activatedAt > TapHealth.stallTimeout else { continue }
-            let snap = TapSnapshot(isPlaying: playing.contains(id), activatedAt: tap.activatedAt,
+            // A just-built (or just-resumed) tap gets stallTimeout to deliver sound before it is judged.
+            let startedAt = max(tap.activatedAt, tap.resumedAt)
+            guard now - startedAt > TapHealth.stallTimeout else { continue }
+            let snap = TapSnapshot(isPlaying: playing.contains(id), activatedAt: startedAt,
                                    lastCallback: tap.lastCallback,
                                    lastNonZero: max(tap.lastNonZero, carriedNonZero[id] ?? 0))
             let verdict = TapHealth.verdict(snap, now: now, lastEvent: lastRouteEvent)

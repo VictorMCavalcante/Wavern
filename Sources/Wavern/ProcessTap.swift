@@ -53,6 +53,10 @@ final class ProcessTap: @unchecked Sendable {
 
     private(set) var isActive = false
     private(set) var activatedAt: TimeInterval = 0
+    /// Main-actor only: IO stopped because the app went quiet (see `pauseIO`).
+    var idlePaused = false
+    /// Main-actor only: when IO last restarted after an idle pause; the watchdog's grace starts here.
+    var resumedAt: TimeInterval = 0
 
     init(process: AudioProcess, mode: Mode = .control) {
         self.process = process
@@ -212,6 +216,20 @@ final class ProcessTap: @unchecked Sendable {
                                                  mElement: kAudioObjectPropertyElementMain)
         let status = AudioObjectSetPropertyData(aggregateID, &address, 0, nil, UInt32(size), raw)
         log.notice("Mic streams off for \(self.process.name, privacy: .public): status \(status)")
+    }
+
+    /// Idle: stop pulling the tap so the aggregate does no IO (CPU, battery, Bluetooth).
+    /// While stopped, `.mutedWhenTapped` lets the app play natively. Call on the HAL queue.
+    func pauseIO() {
+        guard isActive, let procID = ioProcID, aggregateID.isValid else { return }
+        AudioDeviceStop(aggregateID, procID)
+    }
+
+    func resumeIO() {
+        guard isActive, let procID = ioProcID, aggregateID.isValid else { return }
+        gainState[1] = gainState[0]   // no ramp from a stale level
+        let status = AudioDeviceStart(aggregateID, procID)
+        if status != noErr { log.error("Resume failed for \(self.process.name, privacy: .public): \(status)") }
     }
 
     func invalidate() {
