@@ -1,91 +1,39 @@
 import AppKit
-import Foundation
+import Sparkle
 
-/// Checks GitHub releases for a newer version once at launch.
-/// If a newer DMG is found, `installUpdate()` downloads, mounts, copies and relaunches.
+/// Sparkle-backed updates. The appcast lives on the latest GitHub release
+/// (`SUFeedURL`); every archive is EdDSA-signed in CI and verified against
+/// `SUPublicEDKey` before Sparkle installs it.
 @MainActor
-final class UpdateChecker: ObservableObject {
+final class UpdateChecker: NSObject, ObservableObject, SPUUpdaterDelegate, SPUStandardUserDriverDelegate {
     static let shared = UpdateChecker()
 
-    @Published private(set) var updateURL: URL? = nil
-    @Published private(set) var isInstalling = false
+    /// Version of an update Sparkle found in the background; drives the menu chip.
+    @Published private(set) var availableVersion: String?
 
-    private let apiURL = URL(string: "https://api.github.com/repos/VictorMCavalcante/Wavern/releases/latest")!
-    private var dmgDownloadURL: URL?
+    private var controller: SPUStandardUpdaterController!
 
-    func check() {
-        let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
-        Task.detached(priority: .background) {
-            guard let (data, _) = try? await URLSession.shared.data(from: self.apiURL),
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let tag = json["tag_name"] as? String,
-                  let htmlURL = json["html_url"] as? String,
-                  let releaseURL = URL(string: htmlURL) else { return }
-            let latest = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
-            guard latest.compare(current, options: .numeric) == .orderedDescending else { return }
-
-            // Only ever pull the DMG over TLS from GitHub itself.
-            let dmgURL: URL? = (json["assets"] as? [[String: Any]])?
-                .first { ($0["name"] as? String)?.hasSuffix(".dmg") == true }
-                .flatMap { $0["browser_download_url"] as? String }
-                .flatMap { URL(string: $0) }
-                .flatMap { $0.scheme == "https" && $0.host?.hasSuffix("github.com") == true ? $0 : nil }
-
-            await MainActor.run {
-                self.updateURL = releaseURL
-                self.dmgDownloadURL = dmgURL
-            }
-        }
+    override init() {
+        super.init()
+        controller = SPUStandardUpdaterController(
+            startingUpdater: true, updaterDelegate: self, userDriverDelegate: self)
     }
 
-    func installUpdate() {
-        guard let dmgURL = dmgDownloadURL else {
-            if let url = updateURL { NSWorkspace.shared.open(url) }
-            return
-        }
-        isInstalling = true
-        let appPath = Bundle.main.bundlePath
-
-        Task.detached(priority: .userInitiated) {
-            let tmp = FileManager.default.temporaryDirectory
-            let dmgDest = tmp.appendingPathComponent("WavernUpdate.dmg")
-
-            // Download
-            guard let (dl, _) = try? await URLSession.shared.download(from: dmgURL) else {
-                await MainActor.run { self.isInstalling = false }
-                return
-            }
-            try? FileManager.default.removeItem(at: dmgDest)
-            guard (try? FileManager.default.moveItem(at: dl, to: dmgDest)) != nil else {
-                await MainActor.run { self.isInstalling = false }
-                return
-            }
-
-            // Shell script runs after we quit: mount → ditto → unmount → reopen.
-            // Paths go through single quotes; escape any quote inside them.
-            func q(_ path: String) -> String { "'" + path.replacingOccurrences(of: "'", with: "'\\''") + "'" }
-            let script = """
-            #!/bin/sh
-            sleep 1
-            MNT=$(mktemp -d)
-            # Any failure skips the copy but still reopens the (old) app.
-            if hdiutil attach \(q(dmgDest.path)) -mountpoint "$MNT" -nobrowse -quiet; then
-                [ -d "$MNT/Wavern.app" ] && ditto "$MNT/Wavern.app" \(q(appPath))
-                hdiutil detach "$MNT" -quiet
-            fi
-            rm -rf "$MNT" \(q(dmgDest.path))
-            open \(q(appPath))
-            """
-            let sh = tmp.appendingPathComponent("wavern-install.sh")
-            try? script.write(to: sh, atomically: true, encoding: .utf8)
-            try? FileManager.default.setAttributes([.posixPermissions: NSNumber(value: 0o755)],
-                                                   ofItemAtPath: sh.path)
-            let proc = Process()
-            proc.executableURL = URL(fileURLWithPath: "/bin/sh")
-            proc.arguments = [sh.path]
-            try? proc.run()
-
-            await MainActor.run { NSApp.terminate(nil) }
-        }
+    func checkForUpdates() {
+        // Menu-bar app: without this, Sparkle's window opens behind everything.
+        NSApp.activate(ignoringOtherApps: true)
+        controller.checkForUpdates(nil)
     }
+
+    nonisolated func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+        let version = item.displayVersionString
+        Task { @MainActor in self.availableVersion = version }
+    }
+
+    nonisolated func updaterDidNotFindUpdate(_ updater: SPUUpdater) {
+        Task { @MainActor in self.availableVersion = nil }
+    }
+
+    /// Background (LSUIElement) app: let scheduled checks surface via the menu chip.
+    nonisolated var supportsGentleScheduledUpdateReminders: Bool { true }
 }

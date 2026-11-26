@@ -22,7 +22,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         AudioProcessController.shared.start()
         BrowserBridgeInstaller.install()
-        UpdateChecker.shared.check()
         statusPanel = StatusPanel(controller: .shared, updateChecker: .shared)
     }
 }

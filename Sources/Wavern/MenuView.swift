@@ -191,13 +191,13 @@ struct MenuView: View {
                 }
                 .help("Lower other apps while a call app uses the microphone")
                 Spacer()
-                if updateChecker.updateURL != nil {
+                if let version = updateChecker.availableVersion {
                     Chip {
-                        Button(updateChecker.isInstalling ? "Installing…" : "Update") { updateChecker.installUpdate() }
+                        Button("Update") { updateChecker.checkForUpdates() }
                             .buttonStyle(.plain)
                             .foregroundStyle(Theme.accentLight)
-                            .disabled(updateChecker.isInstalling)
                     }
+                    .help("Wavern \(version) is available")
                 }
                 MenuChip { settingsMenu } label: {
                     Image(systemName: "gearshape")
@@ -230,10 +230,7 @@ struct MenuView: View {
             Button("Retry media keys") { controller.retryMediaKeys() }
         }
         Toggle("Launch at login", isOn: launchAtLoginBinding)
-        if updateChecker.updateURL != nil {
-            Button(updateChecker.isInstalling ? "Installing update…" : "Install update") { updateChecker.installUpdate() }
-                .disabled(updateChecker.isInstalling)
-        }
+        Button("Check for updates…") { updateChecker.checkForUpdates() }
         Divider()
         Button("Quit Wavern") { NSApp.terminate(nil) }
     }

@@ -4,10 +4,15 @@ options:
   deploymentTarget:
     macOS: "14.4"
   createIntermediateGroups: true
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.10.1
 settings:
   base:
     MARKETING_VERSION: "1.5.1"  # x-release-please-version
-    CURRENT_PROJECT_VERSION: "1"
+    # Sparkle compares appcast versions against CFBundleVersion: keep it = the marketing version.
+    CURRENT_PROJECT_VERSION: "$(MARKETING_VERSION)"
     SWIFT_VERSION: "5.0"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
@@ -25,6 +30,7 @@ targets:
     dependencies:
       - target: WavernBrowserBridge
         embed: false
+      - package: Sparkle
     postBuildScripts:
       - name: Copy WavernBrowserBridge into app bundle
         script: |
