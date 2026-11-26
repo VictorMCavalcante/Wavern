@@ -10,7 +10,7 @@ packages:
     exactVersion: 2.10.1
 settings:
   base:
-    MARKETING_VERSION: "1.5.1"  # x-release-please-version
+    MARKETING_VERSION: "1.6.0"  # x-release-please-version
     # Sparkle compares appcast versions against CFBundleVersion: keep it = the marketing version.
     CURRENT_PROJECT_VERSION: "$(MARKETING_VERSION)"
     SWIFT_VERSION: "5.0"
