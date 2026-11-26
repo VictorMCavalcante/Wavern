@@ -29,12 +29,11 @@ jobs:
       contents: write
     env:
       TAG: ${{ needs.release-please.outputs.tag_name }}
-      # Optional: with these set the app is Developer ID signed and notarized; without, ad-hoc.
-      DEVELOPER_ID_P12: ${{ secrets.DEVELOPER_ID_P12 }}            # base64 of the exported .p12
-      DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
-      NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}                  # App Store Connect API key (.p8 contents)
-      NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
-      NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+      # Stable self-signed "Wavern Signing" identity (base64 .p12). Its designated requirement is
+      # certificate-based, so macOS keeps the audio/Accessibility grants across updates.
+      # Without it the build falls back to ad-hoc (grants reset on every update).
+      SIGNING_P12: ${{ secrets.SIGNING_P12 }}
+      SIGNING_P12_PASSWORD: ${{ secrets.SIGNING_P12_PASSWORD }}
       # Required: Sparkle EdDSA private key (generate_keys -x). Updates are refused without a valid signature.
       SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
     steps:
@@ -67,40 +66,31 @@ jobs:
             MARKETING_VERSION="$VERSION" \
             build
 
-      - name: Import Developer ID certificate
-        if: env.DEVELOPER_ID_P12 != ''
+      - name: Import signing certificate
+        if: env.SIGNING_P12 != ''
         run: |
           KC="$RUNNER_TEMP/signing.keychain-db"; KCPASS="$(uuidgen)"
           security create-keychain -p "$KCPASS" "$KC"
           security set-keychain-settings -lut 3600 "$KC"
           security unlock-keychain -p "$KCPASS" "$KC"
-          echo "$DEVELOPER_ID_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
-          security import "$RUNNER_TEMP/cert.p12" -k "$KC" -P "$DEVELOPER_ID_P12_PASSWORD" -T /usr/bin/codesign
-          rm "$RUNNER_TEMP/cert.p12"
+          echo "$SIGNING_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KC" -P "$SIGNING_P12_PASSWORD" -T /usr/bin/codesign
+          # Self-signed: codesign only uses identities the system trusts for code signing.
+          /usr/bin/openssl pkcs12 -in "$RUNNER_TEMP/cert.p12" -passin env:SIGNING_P12_PASSWORD -nokeys -out "$RUNNER_TEMP/cert.pem"
+          sudo security add-trusted-cert -d -r trustRoot -p codeSign -k "$KC" "$RUNNER_TEMP/cert.pem"
+          rm "$RUNNER_TEMP/cert.p12" "$RUNNER_TEMP/cert.pem"
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KCPASS" "$KC"
           security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
-          ID=$(security find-identity -v -p codesigning "$KC" | grep "Developer ID Application" | head -1 | awk '{print $2}')
+          ID=$(security find-identity -v -p codesigning "$KC" | grep "Wavern Signing" | head -1 | awk '{print $2}')
           test -n "$ID"
           echo "SIGN_ID=$ID" >> "$GITHUB_ENV"
 
       - name: Code sign
         run: |
           APP="build/Build/Products/Release/Wavern.app"
-          if [ -n "${SIGN_ID:-}" ]; then
-            # Inside-out, hardened runtime; Sparkle's helpers per its distribution docs.
-            S=(codesign --force --timestamp --options runtime --sign "$SIGN_ID")
-            FW="$APP/Contents/Frameworks/Sparkle.framework/Versions/B"
-            "${S[@]}" "$FW/XPCServices/Installer.xpc"
-            "${S[@]}" --preserve-metadata=entitlements "$FW/XPCServices/Downloader.xpc"
-            "${S[@]}" "$FW/Autoupdate"
-            "${S[@]}" "$FW/Updater.app"
-            "${S[@]}" "$APP/Contents/Frameworks/Sparkle.framework"
-            "${S[@]}" "$APP/Contents/MacOS/WavernBrowserBridge"
-            "${S[@]}" --entitlements Sources/Wavern/Wavern.entitlements "$APP"
-          else
-            # Ad-hoc, no hardened runtime: library validation would reject Sparkle without a Team ID.
-            codesign --force --deep --sign - --entitlements Sources/Wavern/Wavern.entitlements "$APP"
-          fi
+          # No hardened runtime: without a Team ID, library validation would refuse Sparkle.framework.
+          codesign --force --deep --sign "${SIGN_ID:--}" \
+            --entitlements Sources/Wavern/Wavern.entitlements "$APP"
           codesign --verify --deep --strict "$APP"
 
       - name: Package .dmg
@@ -112,17 +102,7 @@ jobs:
           ln -s /Applications "$STAGE/Applications"
           DMG="Wavern-${TAG}-macos.dmg"
           hdiutil create -volname "Wavern" -srcfolder "$STAGE" -ov -format UDZO "$DMG"
-          if [ -n "${SIGN_ID:-}" ]; then codesign --force --timestamp --sign "$SIGN_ID" "$DMG"; fi
           echo "DMG=$DMG" >> "$GITHUB_ENV"
-
-      - name: Notarize
-        if: env.SIGN_ID != '' && env.NOTARY_KEY_P8 != ''
-        run: |
-          echo "$NOTARY_KEY_P8" > "$RUNNER_TEMP/notary.p8"
-          xcrun notarytool submit "$DMG" --key "$RUNNER_TEMP/notary.p8" \
-            --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID" --wait
-          rm "$RUNNER_TEMP/notary.p8"
-          xcrun stapler staple "$DMG"
 
       - name: Sign update and write appcast
         run: |

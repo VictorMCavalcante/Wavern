@@ -43,7 +43,8 @@ targets:
         INFOPLIST_FILE: Sources/Wavern/Info.plist
         CODE_SIGN_ENTITLEMENTS: Sources/Wavern/Wavern.entitlements
         GENERATE_INFOPLIST_FILE: NO
-        ENABLE_HARDENED_RUNTIME: YES
+        # Self-signed (no Team ID): hardened runtime library validation would refuse Sparkle.framework.
+        ENABLE_HARDENED_RUNTIME: NO
         ENABLE_APP_SANDBOX: NO
         MACOSX_DEPLOYMENT_TARGET: "14.4"
 
