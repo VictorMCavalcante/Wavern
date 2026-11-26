@@ -11,6 +11,8 @@ struct AudioProcess: Identifiable, Hashable {
     let pid: pid_t
     let bundleID: String?
     var isPlaying: Bool
+    /// IsRunningInput: the process is capturing the microphone (a call, not just an open output engine).
+    var isUsingInput: Bool
 
     /// The app this process belongs to (helper processes resolve to their parent app).
     let runningApp: NSRunningApplication?
@@ -20,17 +22,18 @@ struct AudioProcess: Identifiable, Hashable {
     var id: AudioObjectID { objectID }
     var icon: NSImage? { runningApp?.icon }
 
-    init(objectID: AudioObjectID, pid: pid_t, bundleID: String?, isPlaying: Bool) {
+    init(objectID: AudioObjectID, pid: pid_t, bundleID: String?, isPlaying: Bool, isUsingInput: Bool = false) {
         self.objectID = objectID
         self.pid = pid
         self.bundleID = bundleID
         self.isPlaying = isPlaying
+        self.isUsingInput = isUsingInput
         let app = Self.resolveApp(pid: pid)
         runningApp = app
         resolvedBundleID = app?.bundleIdentifier ?? bundleID
         if let n = app?.localizedName { name = n }
-        else if let bundleID { name = Self.prettyBundleName(bundleID) }
-        else { name = "PID \(pid)" }
+        else if let bundleID, !bundleID.isEmpty { name = Self.prettyBundleName(bundleID) }
+        else { name = Self.executableName(pid) ?? "PID \(pid)" }
     }
 
     /// Non-nil for Chromium-family browsers with tab enrichment support.
@@ -60,7 +63,7 @@ struct AudioProcess: Identifiable, Hashable {
 
     static func == (lhs: AudioProcess, rhs: AudioProcess) -> Bool {
         lhs.objectID == rhs.objectID && lhs.pid == rhs.pid
-            && lhs.isPlaying == rhs.isPlaying && lhs.name == rhs.name
+            && lhs.isPlaying == rhs.isPlaying && lhs.isUsingInput == rhs.isUsingInput && lhs.name == rhs.name
     }
 
     func hash(into hasher: inout Hasher) {
@@ -111,7 +114,13 @@ struct AudioProcess: Identifiable, Hashable {
         return ppid > 1 ? ppid : nil
     }
 
-    private static func prettyBundleName(_ bundleID: String) -> String {
+    /// Command-line tools (afplay, say) have no app and often an empty bundle id.
+    private static func executableName(_ pid: pid_t) -> String? {
+        var buf = [CChar](repeating: 0, count: 256)
+        return proc_name(pid, &buf, UInt32(buf.count)) > 0 ? String(cString: buf) : nil
+    }
+
+        private static func prettyBundleName(_ bundleID: String) -> String {
         let parts = bundleID.split(separator: ".")
         guard parts.count > 2 else { return bundleID }
         return parts.dropFirst(2).joined(separator: " ")

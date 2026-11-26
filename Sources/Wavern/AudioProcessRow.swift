@@ -3,6 +3,8 @@ import SwiftUI
 
 struct AudioProcessRow: View {
     let process: AudioProcess
+    /// The one highlighted tile: lilac gradient, white text and slider.
+    var isFocused = false
     @EnvironmentObject var controller: AudioProcessController
     @EnvironmentObject var browserTabStore: BrowserTabStore
     @State private var isHovered = false
@@ -12,6 +14,10 @@ struct AudioProcessRow: View {
     private var isDucker: Bool { controller.isDucker(process) }
     private var isDucked: Bool { controller.isDucked(process) }
     private var artwork: NSImage? { controller.artworkImages[process.id] }
+
+    private var textColor: Color { isFocused ? .white : .primary }
+    private var subColor: AnyShapeStyle { isFocused ? AnyShapeStyle(Color.white.opacity(0.85)) : AnyShapeStyle(Theme.quiet) }
+    private var iconColor: AnyShapeStyle { isFocused ? AnyShapeStyle(Color.white.opacity(0.9)) : AnyShapeStyle(Theme.icon) }
 
     private var volume: Binding<Double> {
         Binding(
@@ -31,150 +37,169 @@ struct AudioProcessRow: View {
                 artArea
 
                 VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 5) {
+                    Group {
                         if browserTabs.count == 1, let tab = browserTabs.first {
-                            MarqueeText(text: tab.title, weight: .semibold)
+                            MarqueeText(text: tab.title, font: .system(size: 12), weight: titleWeight)
                         } else if let track = controller.nowPlaying(for: process) {
-                            MarqueeText(text: track.title, weight: .semibold)
+                            MarqueeText(text: track.title, font: .system(size: 12), weight: titleWeight)
                         } else {
-                            MarqueeText(text: process.name, weight: .semibold)
+                            MarqueeText(text: process.name, font: .system(size: 12), weight: titleWeight)
                         }
-                        WaveformView(isAnimating: process.isPlaying && !isMuted)
                     }
+                    .foregroundStyle(textColor)
                     subtitle
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+                if isHovered || isDucker {
+                    iconButton(isDucker ? "person.wave.2.fill" : "person.wave.2",
+                               help: isDucker ? "Lowers other apps while playing" : "Lower other apps while this plays") {
+                        controller.toggleDucker(process)
+                    }
+                }
+                if isHovered {
+                    iconButton("arrow.up.forward", help: "Bring \(process.name) to front") { process.activate() }
+                }
 
                 if controller.nowPlaying(for: process) != nil {
                     transportControls
                 }
 
-                Button { controller.toggleDucker(process) } label: {
-                    Image(systemName: isDucker ? "person.wave.2.fill" : "person.wave.2")
-                        .font(.system(size: 10, weight: .semibold))
-                }
-                .buttonStyle(.borderless)
-                .foregroundStyle(isDucker ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
-                .opacity(isHovered || isDucker ? 1 : 0)
-                .help(isDucker ? "Lowers other apps while playing" : "Lower other apps while this plays")
-
-                Button { process.activate() } label: {
-                    Image(systemName: "arrow.up.forward")
-                        .font(.system(size: 10, weight: .semibold))
-                }
-                .buttonStyle(.borderless)
-                .foregroundStyle(.tertiary)
-                .opacity(isHovered ? 1 : 0)
-                .help("Bring \(process.name) to front")
+                trailingLabel
             }
 
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Button {
                     controller.toggleMute(process)
                 } label: {
                     Image(systemName: isMuted ? "speaker.slash.fill" : speakerSymbol)
-                        .font(.system(size: 12))
-                        .foregroundStyle(isMuted ? Color.red : .secondary)
-                        .frame(width: 18)
+                        .font(.system(size: 11))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(isMuted ? AnyShapeStyle(Theme.record) : iconColor)
+                        .frame(width: 16)
                         .contentTransition(.symbolEffect(.replace))
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.plain)
                 .help(isMuted ? "Unmute" : "Mute")
 
                 VolumeSlider(value: volume,
                              maxValue: Double(AudioProcessController.maxGain),
-                             isMuted: isMuted)
-                    .frame(height: 20)
-
-                HStack(spacing: 2) {
-                    if isDucked && !isMuted {
-                        Image(systemName: "arrow.down.right")
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundStyle(Color.accentColor)
-                    }
-                    Text(percentLabel)
-                        .font(.caption.monospacedDigit().weight(.medium))
-                        .foregroundStyle(isBoosted ? Color.orange : .secondary)
-                        .contentTransition(.numericText())
-                }
-                .frame(width: 44, alignment: .trailing)
-                .help(isDucked ? "Ducked to \(Int(controller.duckLevel * 100))% while a call is active" : "")
+                             isMuted: isMuted,
+                             onAccent: isFocused)
+                    .frame(height: 16)
             }
 
             if browserTabs.count > 0 {
                 VStack(spacing: 4) {
                     ForEach(browserTabs) { tab in
-                        BrowserTabRow(tab: tab)
+                        BrowserTabRow(tab: tab, onAccent: isFocused)
                     }
                 }
-                .padding(.leading, 28)
+                .padding(.leading, 24)
             }
 
             if process.chromiumBrowserName != nil && !browserTabStore.isConnected("") {
                 Button("Install browser extension for tab names →") {
                     showExtensionSheet = true
                 }
-                .buttonStyle(.borderless)
-                .font(.caption2)
-                .foregroundStyle(Color.accentColor)
+                .buttonStyle(.plain)
+                .font(.system(size: 10))
+                .foregroundStyle(isFocused ? AnyShapeStyle(Color.white) : AnyShapeStyle(Theme.accentLight))
+            }
+
+            if controller.isUncontrolled(process) {
+                Button { controller.retry(process) } label: {
+                    Label("No control — tap to retry", systemImage: "exclamationmark.triangle")
+                        .font(.system(size: 10))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(subColor)
             }
 
             if let error = controller.tapErrors[process.id] {
                 Text(errorHint(error))
-                    .font(.caption2)
-                    .foregroundStyle(.red)
+                    .font(.system(size: 10))
+                    .foregroundStyle(isFocused ? Color.white : Theme.record)
                     .lineLimit(2)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
         .background {
-            ZStack {
-                if let artwork {
-                    Image(nsImage: artwork)
-                        .resizable()
-                        .scaledToFill()
-                        .blur(radius: 28)
-                        .opacity(isMuted ? 0.12 : 0.3)
-                        .saturation(1.3)
-                }
-                Color.primary.opacity(isHovered ? 0.07 : 0.04)
+            let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+            if isFocused {
+                shape.fill(Theme.accentGradient).opacity(0.95)
+                    .shadow(color: Theme.accentGlow.opacity(0.5), radius: 9, y: 4)
+            } else {
+                shape.fill(isHovered ? Theme.pressed : Theme.hover)
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.primary.opacity(isHovered ? 0.12 : 0.06), lineWidth: 0.5)
-        }
-        .animation(.easeOut(duration: 0.15), value: isHovered)
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .opacity(isMuted ? 0.55 : (process.isPlaying ? 1 : 0.75))
+        .animation(.easeOut(duration: 0.12), value: isHovered)
+        .animation(.easeOut(duration: 0.2), value: isFocused)
         .onHover { isHovered = $0 }
         .sheet(isPresented: $showExtensionSheet) {
             ExtensionOnboardingSheet()
         }
     }
 
-    @ViewBuilder private var subtitle: some View {
-        if !browserTabs.isEmpty, let browserName = process.chromiumBrowserName {
-            Text(browserTabs.count == 1 ? browserName : "\(browserTabs.count) tabs playing")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        } else if let track = controller.nowPlaying(for: process) {
-            MarqueeText(
-                text: track.subtitle.isEmpty
-                    ? process.name
-                    : "\(track.subtitle) · \(process.name)",
-                font: .caption
-            )
-            .foregroundStyle(.secondary)
-        } else if process.isPlaying {
-            Text("Playing")
-                .font(.caption)
-                .foregroundStyle(Color.accentColor)
-        } else {
-            Text("Played just now")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+    private var titleWeight: Font.Weight { isFocused ? .semibold : .medium }
+
+    private func iconButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 10))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(iconColor)
         }
+        .buttonStyle(.plain)
+        .help(help)
+    }
+
+    @ViewBuilder private var trailingLabel: some View {
+        if isMuted {
+            Image(systemName: "speaker.slash.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(Theme.record)
+        } else {
+            HStack(spacing: 2) {
+                if isDucked {
+                    Image(systemName: "arrow.down.right")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(isFocused ? AnyShapeStyle(Color.white) : AnyShapeStyle(Theme.accentLight))
+                }
+                Text(percentLabel)
+                    .font(.system(size: 10).monospacedDigit())
+                    .foregroundStyle(isBoosted && !isFocused ? AnyShapeStyle(Theme.accentLight) : subColor)
+                    .contentTransition(.numericText())
+            }
+            .help(isDucked ? "Ducked to \(Int(controller.duckLevel * 100))% while a call is active" : "")
+        }
+    }
+
+    @ViewBuilder private var subtitle: some View {
+        Group {
+            if !browserTabs.isEmpty, let browserName = process.chromiumBrowserName {
+                Text(browserTabs.count == 1 ? browserName : "\(browserTabs.count) tabs playing")
+            } else if let track = controller.nowPlaying(for: process) {
+                MarqueeText(
+                    text: track.subtitle.isEmpty
+                        ? process.name
+                        : "\(track.subtitle) · \(process.name)",
+                    font: .system(size: 10)
+                )
+            } else if isDucker && controller.isDucking {
+                Text("In a call · lowering others")
+            } else if process.isPlaying {
+                Text("Playing")
+            } else {
+                Text("Played just now")
+            }
+        }
+        .font(.system(size: 10))
+        .lineLimit(1)
+        .foregroundStyle(subColor)
     }
 
     private var isBoosted: Bool { !isMuted && controller.volume(for: process) > 1.001 }
@@ -198,7 +223,7 @@ struct AudioProcessRow: View {
 
     @ViewBuilder private var transportControls: some View {
         let isPlaying = controller.nowPlaying(for: process)?.isPlaying ?? false
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Button { controller.sendMediaCommand(.previous, to: process) } label: {
                 Image(systemName: "backward.fill")
             }.help("Previous track")
@@ -210,44 +235,41 @@ struct AudioProcessRow: View {
                 Image(systemName: "forward.fill")
             }.help("Next track")
         }
-        .buttonStyle(.borderless)
-        .font(.system(size: 11))
-        .foregroundStyle(.secondary)
+        .buttonStyle(.plain)
+        .font(.system(size: 10))
+        .foregroundStyle(iconColor)
     }
 
     @ViewBuilder private var artArea: some View {
+        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
         ZStack(alignment: .bottomTrailing) {
             Group {
                 if let artwork {
                     Image(nsImage: artwork)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: 44, height: 44)
-                        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-                        .shadow(color: .black.opacity(0.35), radius: 6, y: 3)
+                        .frame(width: 30, height: 30)
+                        .clipShape(shape)
+                        .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
                 } else if let icon = process.icon {
                     Image(nsImage: icon)
                         .resizable()
-                        .frame(width: 40, height: 40)
-                        .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 30, height: 30)
                 } else {
-                    RoundedRectangle(cornerRadius: 9, style: .continuous).fill(.quaternary)
-                        .frame(width: 44, height: 44)
+                    shape.fill(Theme.hover)
+                        .frame(width: 30, height: 30)
                         .overlay {
                             Image(systemName: "app.dashed")
-                                .font(.system(size: 20)).foregroundStyle(.secondary)
+                                .font(.system(size: 14)).foregroundStyle(iconColor)
                         }
                 }
             }
             if artwork != nil, let icon = process.icon {
                 Image(nsImage: icon)
-                    .resizable().frame(width: 16, height: 16)
-                    .clipShape(RoundedRectangle(cornerRadius: 3))
-                    .shadow(radius: 2)
-                    .offset(x: 4, y: 4)
+                    .resizable().frame(width: 13, height: 13)
+                    .shadow(radius: 1.5)
+                    .offset(x: 3, y: 3)
             }
         }
-        .opacity(isMuted ? 0.55 : 1)
     }
 }

@@ -16,7 +16,7 @@ jobs:
       tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       - id: release
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
@@ -29,11 +29,18 @@ jobs:
       contents: write
     env:
       TAG: ${{ needs.release-please.outputs.tag_name }}
+      # Stable self-signed "Wavern Signing" identity (base64 .p12). Its designated requirement is
+      # certificate-based, so macOS keeps the audio/Accessibility grants across updates.
+      # Without it the build falls back to ad-hoc (grants reset on every update).
+      SIGNING_P12: ${{ secrets.SIGNING_P12 }}
+      SIGNING_P12_PASSWORD: ${{ secrets.SIGNING_P12_PASSWORD }}
+      # Required: Sparkle EdDSA private key (generate_keys -x). Updates are refused without a valid signature.
+      SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Select latest stable Xcode
-        uses: maxim-lobanov/setup-xcode@v1
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1
         with:
           xcode-version: latest-stable
 
@@ -46,6 +53,7 @@ jobs:
       - name: Build (Release)
         run: |
           VERSION="${TAG#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           xcodebuild \
             -project Wavern.xcodeproj \
             -scheme Wavern \
@@ -58,11 +66,36 @@ jobs:
             MARKETING_VERSION="$VERSION" \
             build
 
+      - name: Import signing certificate
+        if: env.SIGNING_P12 != ''
+        run: |
+          KC="$RUNNER_TEMP/signing.keychain-db"; KCPASS="$(uuidgen)"
+          security create-keychain -p "$KCPASS" "$KC"
+          security set-keychain-settings -lut 3600 "$KC"
+          security unlock-keychain -p "$KCPASS" "$KC"
+          echo "$SIGNING_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KC" -P "$SIGNING_P12_PASSWORD" -T /usr/bin/codesign
+          # Self-signed: codesign only uses identities the system trusts for code signing.
+          /usr/bin/openssl pkcs12 -in "$RUNNER_TEMP/cert.p12" -passin env:SIGNING_P12_PASSWORD -nokeys -out "$RUNNER_TEMP/cert.pem"
+          sudo security add-trusted-cert -d -r trustRoot -p codeSign -k "$KC" "$RUNNER_TEMP/cert.pem"
+          rm "$RUNNER_TEMP/cert.p12" "$RUNNER_TEMP/cert.pem"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KCPASS" "$KC"
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          ID=$(security find-identity -v -p codesigning "$KC" | grep "Wavern Signing" | head -1 | awk '{print $2}')
+          test -n "$ID"
+          echo "SIGN_ID=$ID" >> "$GITHUB_ENV"
+
+      - name: Code sign
+        run: |
+          APP="build/Build/Products/Release/Wavern.app"
+          # No hardened runtime: without a Team ID, library validation would refuse Sparkle.framework.
+          codesign --force --deep --sign "${SIGN_ID:--}" \
+            --entitlements Sources/Wavern/Wavern.entitlements "$APP"
+          codesign --verify --deep --strict "$APP"
+
       - name: Package .dmg
         run: |
           APP="build/Build/Products/Release/Wavern.app"
-          codesign --force --deep --sign - \
-            --entitlements Sources/Wavern/Wavern.entitlements "$APP"
           STAGE="$(mktemp -d)/dmg"
           mkdir -p "$STAGE"
           cp -R "$APP" "$STAGE/"
@@ -71,7 +104,35 @@ jobs:
           hdiutil create -volname "Wavern" -srcfolder "$STAGE" -ov -format UDZO "$DMG"
           echo "DMG=$DMG" >> "$GITHUB_ENV"
 
-      - name: Attach .dmg to release
+      - name: Sign update and write appcast
+        run: |
+          test -n "$SPARKLE_ED_PRIVATE_KEY"
+          SIGN_UPDATE="build/SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update"
+          SIG=$(echo "$SPARKLE_ED_PRIVATE_KEY" | "$SIGN_UPDATE" --ed-key-file - "$DMG")
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${DMG}"
+          cat > appcast.xml <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>Wavern</title>
+              <item>
+                <title>Wavern ${VERSION}</title>
+                <link>https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}</link>
+                <sparkle:version>${VERSION}</sparkle:version>
+                <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
+                <sparkle:minimumSystemVersion>14.4</sparkle:minimumSystemVersion>
+                <pubDate>$(LC_ALL=C date -R)</pubDate>
+                <enclosure url="${URL}" ${SIG} type="application/octet-stream"/>
+              </item>
+            </channel>
+          </rss>
+          EOF
+
+      - name: Attach .dmg and appcast to release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$TAG" "$DMG" --clobber
+        run: gh release upload "$TAG" "$DMG" appcast.xml --clobber
+
+      - name: Clean up keychain
+        if: always() && env.SIGN_ID != ''
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true

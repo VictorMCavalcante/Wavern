@@ -38,9 +38,44 @@ extension AudioProcessController {
             listen(Self.mainVolume, on: id, scope: kAudioObjectPropertyScopeOutput) { [weak self] in
                 self?.refreshMasterVolume()
             }
+            // Taps are built for one format; a real change means rebuild. These also fire
+            // without a change (aggregates come and go on the device), so compare first.
+            tapFormat = Self.formatSignature(id)
+            listen(kAudioDevicePropertyNominalSampleRate, on: id) { [weak self] in
+                self?.formatMayHaveChanged(id)
+            }
+            listen(kAudioDevicePropertyStreamConfiguration, on: id, scope: kAudioObjectPropertyScopeOutput) { [weak self] in
+                self?.formatMayHaveChanged(id)
+            }
+            listen(kAudioDevicePropertyDeviceIsAlive, on: id) { [weak self] in
+                let alive: UInt32 = (try? id.read(kAudioDevicePropertyDeviceIsAlive, default: UInt32(1))) ?? 0
+                if alive == 0 { self?.rebuildAllTaps(reason: .deviceDied) }
+            }
         }
         refreshMasterVolume()
         refreshOutputDevices()
+    }
+
+    private func formatMayHaveChanged(_ id: AudioObjectID) {
+        guard id == outputDeviceID else { return }
+        let now = Self.formatSignature(id)
+        guard now != tapFormat else { return }
+        log.notice("Output format \(self.tapFormat, privacy: .public) → \(now, privacy: .public)")
+        tapFormat = now
+        rebuildAllTaps(reason: .formatChanged)
+    }
+
+    /// Sample rate + channels of each output stream, e.g. "48000:2".
+    nonisolated static func formatSignature(_ id: AudioObjectID) -> String {
+        let rate: Float64 = (try? id.read(kAudioDevicePropertyNominalSampleRate, default: Float64(0))) ?? 0
+        let streams: [AudioObjectID] = (try? id.readArray(
+            kAudioDevicePropertyStreams, scope: kAudioObjectPropertyScopeOutput)) ?? []
+        let channels = streams.map { s -> String in
+            let f: AudioStreamBasicDescription? = try? s.read(
+                kAudioStreamPropertyVirtualFormat, default: AudioStreamBasicDescription())
+            return String(f?.mChannelsPerFrame ?? 0)
+        }
+        return "\(Int(rate)):" + channels.joined(separator: ",")
     }
 
     func refreshMasterVolume() {
@@ -60,17 +95,34 @@ extension AudioProcessController {
         guard id.isValid else { return }
         let clamped = min(max(value, 0), 1)
         setMasterVolumeState(clamped)
-        do {
-            try id.write(clamped, Self.mainVolume, scope: kAudioObjectPropertyScopeOutput)
-        } catch {
-            log.error("Master volume write failed: \(String(describing: error), privacy: .public)")
+        volumeQueue.async {
+            do {
+                try id.write(clamped, Self.mainVolume, scope: kAudioObjectPropertyScopeOutput)
+            } catch {
+                log.error("Master volume write failed: \(String(describing: error), privacy: .public)")
+            }
         }
     }
 
+    func scheduleOutputDevicesRefresh() {
+        deviceListWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.refreshOutputDevices() }
+        deviceListWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: work)
+    }
+
     func refreshOutputDevices() {
+        deviceListWork = nil
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let devices = Self.readOutputDevices() else { return }
+            Task { @MainActor in self?.setOutputDevices(devices) }
+        }
+    }
+
+    nonisolated private static func readOutputDevices() -> [OutputDevice]? {
         guard let ids: [AudioObjectID] = try? AudioObjectID.system.readArray(kAudioHardwarePropertyDevices)
-        else { return }
-        let devices = ids.compactMap { id -> OutputDevice? in
+        else { return nil }
+        return ids.compactMap { id -> OutputDevice? in
             guard id.isValid,
                   (try? id.readArray(kAudioDevicePropertyStreams, scope: kAudioObjectPropertyScopeOutput,
                                      of: AudioObjectID.self).isEmpty) == false,
@@ -85,7 +137,6 @@ extension AudioProcessController {
             guard transport != kAudioDeviceTransportTypeVirtual else { return nil }
             return OutputDevice(id: id, name: name, transport: transport)
         }
-        setOutputDevices(devices)
     }
 
     /// Make `id` the system default output; the HAL notifies us back and the

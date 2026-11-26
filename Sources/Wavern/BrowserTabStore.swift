@@ -99,10 +99,18 @@ final class BrowserTabStore: ObservableObject {
         let v = min(max(value, 0), 1)
         tabVolumes[tab.source, default: [:]][id] = v
         if let host = tab.host { settings.setTabVolume(v, forHost: host) }
-        writeVolumes(tab.source)
+        pendingWrites[tab.source]?.cancel()
+        let source = tab.source
+        let work = DispatchWorkItem { [weak self] in self?.writeVolumes(source) }
+        pendingWrites[source] = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: work)
     }
 
+    /// Slider drags write once they pause, not on every tick.
+    private var pendingWrites: [String: DispatchWorkItem] = [:]
+
     private func writeVolumes(_ source: String) {
+        pendingWrites.removeValue(forKey: source)?.cancel()
         let map = tabVolumes[source] ?? [:]
         let payload: [String: Any] = [
             "volumes": Dictionary(uniqueKeysWithValues: map.map { (String($0.key), $0.value) })

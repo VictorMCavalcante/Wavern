@@ -3,18 +3,21 @@ import SwiftUI
 
 // MARK: - VolumeSlider
 
-/// Gradient volume slider: accent up to unity, warming into orange for the
-/// boost zone. A tick marks 100%. Drag anywhere on the track to set the value.
+/// Lilac gradient volume slider; the boost zone above 100% brightens toward
+/// #E9D5FF. A tick marks 100%. `onAccent` is the white variant for the
+/// highlighted tile. Drag anywhere on the track to set the value.
 struct VolumeSlider: View {
     @Binding var value: Double
     let maxValue: Double
     var isMuted: Bool
+    var onAccent = false
 
     @State private var isDragging = false
     @State private var isHovered = false
 
     private let trackHeight: CGFloat = 5
     private let thumbSize: CGFloat = 13
+    private static let boostTip = Color(nsColor: NSColor(srgbRed: 0xE9 / 255, green: 0xD5 / 255, blue: 0xFF / 255, alpha: 1))
 
     var body: some View {
         GeometryReader { geo in
@@ -25,16 +28,23 @@ struct VolumeSlider: View {
 
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Color.primary.opacity(0.12))
+                    .fill(onAccent ? AnyShapeStyle(Color.white.opacity(0.28)) : AnyShapeStyle(Theme.hover))
                     .frame(height: trackHeight)
 
-                LinearGradient(
-                    stops: [
-                        .init(color: .accentColor.opacity(0.75), location: 0),
-                        .init(color: .accentColor, location: unityFrac),
-                        .init(color: .orange, location: 1),
-                    ],
-                    startPoint: .leading, endPoint: .trailing)
+                Group {
+                    if onAccent {
+                        Color.white
+                    } else {
+                        LinearGradient(
+                            stops: [
+                                .init(color: Theme.accentLight, location: 0),
+                                .init(color: Theme.accentDeep, location: unityFrac),
+                                .init(color: Theme.accentGlow, location: min(unityFrac + 0.001, 1)),
+                                .init(color: Self.boostTip, location: 1),
+                            ],
+                            startPoint: .leading, endPoint: .trailing)
+                    }
+                }
                     .frame(height: trackHeight)
                     .mask(alignment: .leading) {
                         Capsule().frame(width: max(thumbX, trackHeight))
@@ -42,11 +52,13 @@ struct VolumeSlider: View {
                     .saturation(isMuted ? 0 : 1)
                     .opacity(isMuted ? 0.4 : 1)
 
-                // Unity tick
-                Capsule()
-                    .fill(Color.primary.opacity(0.35))
-                    .frame(width: 2, height: trackHeight + 4)
-                    .offset(x: unityFrac * (width - thumbSize) + thumbSize / 2 - 1)
+                if maxValue > 1 {
+                    // Unity tick
+                    Capsule()
+                        .fill(onAccent ? AnyShapeStyle(Color.white.opacity(0.5)) : AnyShapeStyle(Theme.quiet))
+                        .frame(width: 2, height: trackHeight + 4)
+                        .offset(x: unityFrac * (width - thumbSize) + thumbSize / 2 - 1)
+                }
 
                 Circle()
                     .fill(.white)
@@ -80,6 +92,7 @@ struct VolumeSlider: View {
 /// of the browser-wide tap gain above it.
 struct BrowserTabRow: View {
     let tab: BrowserTab
+    var onAccent = false
     @EnvironmentObject var browserTabStore: BrowserTabStore
 
     private var volume: Binding<Double> {
@@ -92,14 +105,14 @@ struct BrowserTabRow: View {
     var body: some View {
         HStack(spacing: 8) {
             favicon
-            MarqueeText(text: tab.title, font: .caption)
-                .foregroundStyle(.secondary)
+            MarqueeText(text: tab.title, font: .system(size: 10))
+                .foregroundStyle(onAccent ? AnyShapeStyle(Color.white.opacity(0.85)) : AnyShapeStyle(Theme.icon))
                 .frame(width: 96, alignment: .leading)
-            VolumeSlider(value: volume, maxValue: 1, isMuted: false)
+            VolumeSlider(value: volume, maxValue: 1, isMuted: false, onAccent: onAccent)
                 .frame(height: 16)
             Text("\(Int((browserTabStore.volume(for: tab) * 100).rounded()))%")
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 10).monospacedDigit())
+                .foregroundStyle(onAccent ? AnyShapeStyle(Color.white.opacity(0.85)) : AnyShapeStyle(Theme.quiet))
                 .frame(width: 32, alignment: .trailing)
                 .contentTransition(.numericText())
         }
@@ -110,7 +123,7 @@ struct BrowserTabRow: View {
     @ViewBuilder private var favicon: some View {
         let placeholder = Image(systemName: "globe")
             .font(.system(size: 10))
-            .foregroundStyle(.tertiary)
+            .foregroundStyle(Theme.quiet)
         if let s = tab.favIconUrl, let url = URL(string: s), url.scheme?.hasPrefix("http") == true || url.isFileURL {
             AsyncImage(url: url) { phase in
                 if let image = phase.image {

@@ -1,4 +1,3 @@
-import Accelerate
 import AudioToolbox
 import CoreAudio
 import Foundation
@@ -11,11 +10,11 @@ import Foundation
 ///      audio is instead delivered to us.
 ///   2. Build a *private* aggregate device combining the current default output
 ///      device and that tap.
-///   3. Run an IOProc that copies the tapped frames to the output device,
-///      multiplied by `gain`. gain 0 = mute, 1 = unity, >1 = boost.
+///   3. Run an IOProc that mixes the tapped frames to the output device
+///      (`AudioMix.render`), ramping to `gain`. gain 0 = mute, 1 = unity, >1 = boost.
 ///
-/// `gain` is stored behind a stable pointer so the realtime audio thread can
-/// read it without locking while the UI writes it from the main thread (aligned
+/// `gain` (and the IO timestamps) live behind stable pointers so the realtime
+/// audio thread can read/write them without locking while the UI writes it from the main thread (aligned
 /// 4-byte float access is atomic on Apple Silicon).
 /// `@unchecked Sendable`: instances are created on the main thread but activated,
 /// torn down, and reaped on `AudioProcessController`'s serial HAL queue, while the
@@ -24,47 +23,75 @@ import Foundation
 /// that one queue.
 final class ProcessTap: @unchecked Sendable {
 
+    /// `.control` routes the app through our aggregate and applies `gain`.
+    /// `.muteOnly` just holds a `.muted` tap: no aggregate, no IOProc.
+    enum Mode { case control, muteOnly }
+
     let process: AudioProcess
+    let mode: Mode
 
     private var tapID: AudioObjectID = .unknown
     private var aggregateID: AudioObjectID = .unknown
     private var ioProcID: AudioDeviceIOProcID?
     private let ioQueue = DispatchQueue(label: "com.wavern.tap.io", qos: .userInteractive)
 
-    private let gainPtr: UnsafeMutablePointer<Float> = {
-        let p = UnsafeMutablePointer<Float>.allocate(capacity: 1)
-        p.initialize(to: 1.0)
+    /// [0] = target gain (UI writes), [1] = last applied gain (only IO writes).
+    private let gainState: UnsafeMutablePointer<Float> = {
+        let p = UnsafeMutablePointer<Float>.allocate(capacity: 2)
+        p.initialize(repeating: 1.0, count: 2)
         return p
     }()
+    /// [0] = last IO callback, [1] = last callback with a non-zero sample.
+    /// Seconds in the `mach_absolute_time` base; 0 = never. Only IO writes.
+    private let times: UnsafeMutablePointer<Double> = {
+        let p = UnsafeMutablePointer<Double>.allocate(capacity: 2)
+        p.initialize(repeating: 0, count: 2)
+        return p
+    }()
+    /// Host ticks → seconds, computed once so the IO block calls nothing.
+    private let hostTicksToSeconds: Double
 
     private(set) var isActive = false
-    /// Fires once IO actually flows. `activate()` can return success even when
-    /// TCC silently denies the tap (HAL reports `noErr` throughout, then just
-    /// never calls the IOProc) — so "the setup calls succeeded" is not proof
-    /// audio access was granted. Only a real callback is.
-    var onFirstIO: (() -> Void)?
-    private var firedFirstIO = false
+    private(set) var activatedAt: TimeInterval = 0
+    /// Main-actor only: IO stopped because the app went quiet (see `pauseIO`).
+    var idlePaused = false
+    /// Main-actor only: when IO last restarted after an idle pause; the watchdog's grace starts here.
+    var resumedAt: TimeInterval = 0
 
-    init(process: AudioProcess) {
+    init(process: AudioProcess, mode: Mode = .control) {
         self.process = process
+        self.mode = mode
+        var tb = mach_timebase_info_data_t()
+        mach_timebase_info(&tb)
+        hostTicksToSeconds = Double(tb.numer) / Double(tb.denom) / 1_000_000_000
     }
 
     var gain: Float {
-        get { gainPtr.pointee }
-        set { gainPtr.pointee = max(0, newValue) }
+        get { gainState[0] }
+        set { gainState[0] = max(0, newValue) }
     }
+
+    // `mHostTime` is `mach_absolute_time` ticks; scaled by the timebase it is
+    // the same clock as `ProcessInfo.systemUptime` (both stop during sleep), so
+    // these compare directly against `systemUptime`. On Apple Silicon the two
+    // coincide exactly.
+    var lastCallback: TimeInterval { times[0] }
+    var lastNonZero: TimeInterval { times[1] }
 
     // MARK: Lifecycle
 
     func activate() throws {
         guard !isActive else { return }
+        // Before the first buffer: no ramp from the init value of 1.
+        gainState[1] = gainState[0]
+        times[0] = 0; times[1] = 0  // IO is not running yet; drop any previous run's stamps
 
         // 1. Tap the process, muting its normal output.
         let description = CATapDescription(
             stereoMixdownOfProcesses: [process.objectID])
         description.name = "\(Self.tapNamePrefix)\(process.pid)"
         description.isPrivate = true
-        description.muteBehavior = CATapMuteBehavior.mutedWhenTapped
+        description.muteBehavior = mode == .muteOnly ? .muted : .mutedWhenTapped
         // Inclusive list: tap ONLY this process. `isExclusive = true` would flip
         // the list's meaning to "tap everything EXCEPT this process", which routes
         // every *other* app's audio through our aggregate — so lowering one app's
@@ -78,13 +105,28 @@ final class ProcessTap: @unchecked Sendable {
         }
         tapID = newTapID
 
+        if mode == .muteOnly {
+            isActive = true
+            activatedAt = ProcessInfo.processInfo.systemUptime
+            log.info("Mute-only tap for \(self.process.name, privacy: .public) (pid \(self.process.pid))")
+            return
+        }
+
         // 2. Resolve current default output device + build the aggregate.
-        let outputID: AudioObjectID = try AudioObjectID.system.read(
-            kAudioHardwarePropertyDefaultOutputDevice, default: AudioObjectID.unknown)
-        guard outputID.isValid,
-              let outputUID: String = try outputID.readCF(kAudioDevicePropertyDeviceUID),
-              let tapUID: String = try tapID.readCF(kAudioTapPropertyUID) else {
-            throw TapError.setup("Could not resolve output/tap UID")
+        let outputUID: String, tapUID: String
+        do {
+            let outputID: AudioObjectID = try AudioObjectID.system.read(
+                kAudioHardwarePropertyDefaultOutputDevice, default: AudioObjectID.unknown)
+            guard outputID.isValid,
+                  let o: String = try outputID.readCF(kAudioDevicePropertyDeviceUID),
+                  let t: String = try tapID.readCF(kAudioTapPropertyUID) else {
+                throw TapError.setup("Could not resolve output/tap UID")
+            }
+            outputUID = o
+            tapUID = t
+        } catch {
+            teardown()  // don't leak the tap we just created
+            throw error
         }
 
         let aggregateUID = "\(Self.aggregateUIDPrefix)\(process.pid).\(UUID().uuidString)"
@@ -109,20 +151,31 @@ final class ProcessTap: @unchecked Sendable {
         var newAggregate: AudioObjectID = .unknown
         status = AudioHardwareCreateAggregateDevice(description2 as CFDictionary, &newAggregate)
         guard status == noErr, newAggregate.isValid else {
-            AudioHardwareDestroyProcessTap(tapID)
-            tapID = .unknown
+            teardown()
             throw TapError.create("AudioHardwareCreateAggregateDevice", status)
         }
         aggregateID = newAggregate
 
-        // 3. Install the gain-applying IOProc and start it.
-        let gainPtr = self.gainPtr
-        let ioBlock: AudioDeviceIOBlock = { [weak self] _, inInputData, _, outOutputData, _ in
-            ProcessTap.render(input: inInputData, output: outOutputData, gain: gainPtr.pointee)
-            guard let self, !self.firedFirstIO else { return }
-            self.firedFirstIO = true
-            let callback = self.onFirstIO
-            DispatchQueue.main.async { callback?() }
+        // AudioMix assumes the tap is the LAST input stream; log the count so a
+        // mic-bearing output device (extra stream ahead of the tap) is visible.
+        let inputStreams = (try? aggregateID.readArray(
+            kAudioDevicePropertyStreams, scope: kAudioObjectPropertyScopeInput,
+            of: AudioObjectID.self))?.count ?? -1
+        log.notice("Aggregate for \(self.process.name, privacy: .public) has \(inputStreams) input stream(s)")
+
+        // 3. Install the gain-applying IOProc and start it. Captures only raw
+        // pointers and a Double: no self, no ARC traffic on the IO thread.
+        let gainState = self.gainState
+        let times = self.times
+        let toSeconds = hostTicksToSeconds
+        let ioBlock: AudioDeviceIOBlock = { inNow, inInputData, _, outOutputData, _ in
+            let now = Double(inNow.pointee.mHostTime) * toSeconds
+            times[0] = now
+            let input = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: inInputData))
+            let output = UnsafeMutableAudioBufferListPointer(outOutputData)
+            if AudioMix.render(input: input, output: output, gainState: gainState) {
+                times[1] = now
+            }
         }
 
         var newProcID: AudioDeviceIOProcID?
@@ -132,6 +185,7 @@ final class ProcessTap: @unchecked Sendable {
             throw TapError.create("AudioDeviceCreateIOProcIDWithBlock", status)
         }
         ioProcID = procID
+        if inputStreams > 1 { useOnlyTapInput(procID, streams: inputStreams) }
 
         status = AudioDeviceStart(aggregateID, procID)
         guard status == noErr else {
@@ -140,7 +194,42 @@ final class ProcessTap: @unchecked Sendable {
         }
 
         isActive = true
+        activatedAt = ProcessInfo.processInfo.systemUptime
         log.info("Tap active for \(self.process.name, privacy: .public) (pid \(self.process.pid))")
+    }
+
+    /// The aggregate's inputs are the output device's own mic streams, then the tap.
+    /// Turning the mic streams off for our IOProc keeps the HAL from starting the mic
+    /// (orange indicator, headset dropping to its call profile). The tap stays last.
+    private func useOnlyTapInput(_ procID: AudioDeviceIOProcID, streams: Int) {
+        let offset = MemoryLayout<AudioHardwareIOProcStreamUsage>.offset(of: \.mStreamIsOn)!
+        let size = offset + streams * MemoryLayout<UInt32>.size
+        let raw = UnsafeMutableRawPointer.allocate(byteCount: size, alignment: 8)
+        defer { raw.deallocate() }
+        raw.storeBytes(of: unsafeBitCast(procID, to: UnsafeMutableRawPointer.self), as: UnsafeMutableRawPointer.self)
+        raw.storeBytes(of: UInt32(streams), toByteOffset: MemoryLayout<UnsafeMutableRawPointer>.size, as: UInt32.self)
+        for i in 0..<streams {
+            raw.storeBytes(of: i == streams - 1 ? 1 : 0, toByteOffset: offset + i * 4, as: UInt32.self)
+        }
+        var address = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyIOProcStreamUsage,
+                                                 mScope: kAudioObjectPropertyScopeInput,
+                                                 mElement: kAudioObjectPropertyElementMain)
+        let status = AudioObjectSetPropertyData(aggregateID, &address, 0, nil, UInt32(size), raw)
+        log.notice("Mic streams off for \(self.process.name, privacy: .public): status \(status)")
+    }
+
+    /// Idle: stop pulling the tap so the aggregate does no IO (CPU, battery, Bluetooth).
+    /// While stopped, `.mutedWhenTapped` lets the app play natively. Call on the HAL queue.
+    func pauseIO() {
+        guard isActive, let procID = ioProcID, aggregateID.isValid else { return }
+        AudioDeviceStop(aggregateID, procID)
+    }
+
+    func resumeIO() {
+        guard isActive, let procID = ioProcID, aggregateID.isValid else { return }
+        gainState[1] = gainState[0]   // no ramp from a stale level
+        let status = AudioDeviceStart(aggregateID, procID)
+        if status != noErr { log.error("Resume failed for \(self.process.name, privacy: .public): \(status)") }
     }
 
     func invalidate() {
@@ -167,43 +256,8 @@ final class ProcessTap: @unchecked Sendable {
 
     deinit {
         teardown()
-        gainPtr.deallocate()
-    }
-
-    // MARK: Realtime render
-
-    /// Copy tapped input to the output buffers, scaled by `gain`. Runs on the
-    /// audio IO thread — no allocations, no locks.
-    private static func render(input: UnsafePointer<AudioBufferList>,
-                               output: UnsafeMutablePointer<AudioBufferList>,
-                               gain: Float) {
-        let inList = UnsafeMutableAudioBufferListPointer(
-            UnsafeMutablePointer(mutating: input))
-        let outList = UnsafeMutableAudioBufferListPointer(output)
-
-        let pairs = min(inList.count, outList.count)
-        var scale = gain
-
-        for i in 0..<outList.count {
-            let outBuf = outList[i]
-            guard let dst = outBuf.mData else { continue }
-            let outFloats = Int(outBuf.mDataByteSize) / MemoryLayout<Float>.size
-
-            if i < pairs, let src = inList[i].mData {
-                let n = min(outFloats, Int(inList[i].mDataByteSize) / MemoryLayout<Float>.size)
-                vDSP_vsmul(src.assumingMemoryBound(to: Float.self), 1,
-                           &scale,
-                           dst.assumingMemoryBound(to: Float.self), 1,
-                           vDSP_Length(n))
-                // Silence any tail the input didn't cover.
-                if n < outFloats {
-                    memset(dst.advanced(by: n * MemoryLayout<Float>.size), 0,
-                           (outFloats - n) * MemoryLayout<Float>.size)
-                }
-            } else {
-                memset(dst, 0, Int(outBuf.mDataByteSize))
-            }
-        }
+        gainState.deallocate()
+        times.deallocate()
     }
 }
 

@@ -7,14 +7,22 @@
     <key>CFBundleIdentifier</key>
     <string>com.wavern.app</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>$(CURRENT_PROJECT_VERSION)</string>
     <key>CFBundleShortVersionString</key>
     <string>$(MARKETING_VERSION)</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>LSUIElement</key>
+    <true/>
+    <key>SUFeedURL</key>
+    <string>https://github.com/VictorMCavalcante/Wavern/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>baQzBmfsGvFn6Mb1MpfvbD+Um0WZx6HZ8Ti19SMryFk=</string>
+    <key>SUEnableAutomaticChecks</key>
     <true/>
     <key>NSAudioCaptureUsageDescription</key>
     <string>Wavern needs system audio access to control per-app volume using Core Audio process taps.</string>

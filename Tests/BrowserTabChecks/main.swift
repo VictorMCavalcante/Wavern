@@ -43,11 +43,11 @@ let radio: [String: Any] = ["id": 7, "title": "Rádio", "url": "https://radio.te
     store.refresh()
     let chrome = store.tabs(for: "")[0], birdd = store.tabs(for: "birdd")[0]
     assert(chrome.id != birdd.id)
-    store.setVolume(0.4, for: birdd)
+    store.setVolume(0.4, for: birdd); settle()
     assert(store.volume(for: birdd) == 0.4 && store.volume(for: chrome) == 1)
     assert(volumes("browser-tab-volumes-birdd.json", in: dir) == ["7": Double(Float(0.4))])
     assert(volumes("browser-tab-volumes.json", in: dir) == nil) // Chrome's file untouched
-    store.setVolume(0.2, for: chrome)
+    store.setVolume(0.2, for: chrome); settle()
     assert(volumes("browser-tab-volumes.json", in: dir) == ["7": Double(Float(0.2))])
     assert(volumes("browser-tab-volumes-birdd.json", in: dir) == ["7": Double(Float(0.4))])
     print("ok sameIdInTwoBrowsersDoesNotCollide")
@@ -57,7 +57,7 @@ let radio: [String: Any] = ["id": 7, "title": "Rádio", "url": "https://radio.te
     let (store, dir) = makeStore()
     write("browser-tabs.json", [radio], in: dir)
     store.refresh()
-    store.setVolume(0.5, for: store.tabs(for: "")[0]) // remembers radio.test → 50%
+    store.setVolume(0.5, for: store.tabs(for: "")[0]); settle() // remembers radio.test → 50%
     write("browser-tabs-birdd.json", [["id": 9, "title": "Outra", "url": "https://radio.test/b", "audible": true]], in: dir)
     store.refresh()
     assert(volumes("browser-tab-volumes-birdd.json", in: dir) == ["9": 0.5])
@@ -70,3 +70,6 @@ MainActor.assumeIsolated {
     sameIdInTwoBrowsersDoesNotCollide()
     hostVolumeIsWrittenToTheOwnersFile()
 }
+
+/// Tab-volume writes are debounced; let the pending one land.
+@MainActor func settle() { RunLoop.main.run(until: Date().addingTimeInterval(0.25)) }
