@@ -81,10 +81,17 @@ final class BrowserTabStore: ObservableObject {
         let v = min(max(value, 0), 1)
         tabVolumes[id] = v
         if let host = tab.host { settings.setTabVolume(v, forHost: host) }
-        writeVolumes()
+        pendingWrite?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.writeVolumes() }
+        pendingWrite = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: work)
     }
 
+    private var pendingWrite: DispatchWorkItem?
+
     private func writeVolumes() {
+        pendingWrite?.cancel()
+        pendingWrite = nil
         let payload: [String: Any] = [
             "volumes": Dictionary(uniqueKeysWithValues: tabVolumes.map { (String($0.key), $0.value) })
         ]

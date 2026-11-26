@@ -108,7 +108,7 @@ struct AudioProcessRow: View {
             }
 
             if controller.isUncontrolled(process) {
-                Button { controller.setVolume(controller.volume(for: process), for: process) } label: {
+                Button { controller.retry(process) } label: {
                     Label("No control — tap to retry", systemImage: "exclamationmark.triangle")
                         .font(.system(size: 10))
                 }

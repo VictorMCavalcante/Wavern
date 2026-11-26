@@ -48,7 +48,8 @@ extension AudioObjectID {
         defer { buffer.deallocate() }
         status = AudioObjectGetPropertyData(self, &address, 0, nil, &dataSize, buffer.baseAddress!)
         guard status == noErr else { throw CoreAudioError.status(status, selector) }
-        return Array(buffer)
+        // The list can shrink between the two calls; copy only what was written.
+        return Array(buffer.prefix(Swift.min(count, Int(dataSize) / MemoryLayout<T>.stride)))
     }
 
     /// Reads a CoreFoundation-typed property (returns a retained object bridged to Swift).

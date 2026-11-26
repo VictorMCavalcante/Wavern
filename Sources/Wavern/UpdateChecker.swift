@@ -55,7 +55,11 @@ final class UpdateChecker: ObservableObject {
                 await MainActor.run { self.isInstalling = false }
                 return
             }
-            try? FileManager.default.moveItem(at: dl, to: dmgDest)
+            try? FileManager.default.removeItem(at: dmgDest)
+            guard (try? FileManager.default.moveItem(at: dl, to: dmgDest)) != nil else {
+                await MainActor.run { self.isInstalling = false }
+                return
+            }
 
             // Shell script runs after we quit: mount → ditto → unmount → reopen.
             // Paths go through single quotes; escape any quote inside them.
@@ -64,9 +68,11 @@ final class UpdateChecker: ObservableObject {
             #!/bin/sh
             sleep 1
             MNT=$(mktemp -d)
-            hdiutil attach \(q(dmgDest.path)) -mountpoint "$MNT" -nobrowse -quiet
-            ditto "$MNT/Wavern.app" \(q(appPath))
-            hdiutil detach "$MNT" -quiet
+            # Any failure skips the copy but still reopens the (old) app.
+            if hdiutil attach \(q(dmgDest.path)) -mountpoint "$MNT" -nobrowse -quiet; then
+                [ -d "$MNT/Wavern.app" ] && ditto "$MNT/Wavern.app" \(q(appPath))
+                hdiutil detach "$MNT" -quiet
+            fi
             rm -rf "$MNT" \(q(dmgDest.path))
             open \(q(appPath))
             """

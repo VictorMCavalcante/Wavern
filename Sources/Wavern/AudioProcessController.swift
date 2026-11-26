@@ -241,6 +241,12 @@ final class AudioProcessController: ObservableObject {
         applyGain(for: process)
     }
 
+    /// Re-attempts control without touching volume or mute state.
+    func retry(_ process: AudioProcess) {
+        retryControl(process, unmuting: !isMuted(process))
+        applyGain(for: process)
+    }
+
     func toggleMute(_ process: AudioProcess) {
         let nowMuted = !muted.contains(process.id)
         retryControl(process, unmuting: !nowMuted)
